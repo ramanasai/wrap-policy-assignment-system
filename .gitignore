@@ -1,0 +1,28 @@
+# Go
+*.exe
+*.test
+*.out
+/vendor/
+/bin/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Local data
+/tmp/
+*.log
+postgres-data/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# sqlc generated (uncomment if you prefer regenerating in CI)
+# gen/
+
+# Python (used only for local validation tooling)
+.venv/
+__pycache__/
