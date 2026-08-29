@@ -25,12 +25,13 @@ const (
 
 // Env var names.
 const (
-	EnvAppEnv         = "APP_ENV"
-	EnvHTTPPort       = "HTTP_PORT"
-	EnvDatabaseURL    = "DATABASE_URL"
+	EnvAppEnv          = "APP_ENV"
+	EnvHTTPPort        = "HTTP_PORT"
+	EnvDatabaseURL     = "DATABASE_URL"
 	EnvReconcilerBatch = "RECONCILER_BATCH_SIZE"
 	EnvSweeperInterval = "SWEEPER_INTERVAL"
 	EnvResolverCache   = "RESOLVER_CACHE_SIZE"
+	EnvSeedEmployees   = "SEED_EMPLOYEES"
 )
 
 // Config is the fully-typed runtime configuration.
@@ -45,6 +46,7 @@ type Config struct {
 	ReconcilerBatchSize int
 	SweeperInterval     time.Duration
 	ResolverCacheSize   int
+	SeedEmployees       int
 }
 
 // LogConfig carries logging setup (validated at Load time).
@@ -63,15 +65,16 @@ const (
 	DefaultReconcilerBatch = 500
 	DefaultSweeperInterval = 15 * time.Minute
 	DefaultResolverCache   = 10_000
+	DefaultSeedEmployees   = 1000
 )
 
 // Load reads and validates configuration from the environment.
 func Load() (Config, error) {
 	cfg := Config{
-		AppEnv:           utils.GetString(EnvAppEnv, DefaultAppEnv),
-		HTTPPort:         DefaultHTTPPort,
-		DatabaseURL:      utils.GetString(EnvDatabaseURL, DefaultDatabaseURL),
-		Log:              LogConfig{Level: utils.GetString(logging.EnvLogLevel, DefaultLogLevel), Format: utils.GetString(logging.EnvLogFormat, DefaultLogFormat)},
+		AppEnv:              utils.GetString(EnvAppEnv, DefaultAppEnv),
+		HTTPPort:            DefaultHTTPPort,
+		DatabaseURL:         utils.GetString(EnvDatabaseURL, DefaultDatabaseURL),
+		Log:                 LogConfig{Level: utils.GetString(logging.EnvLogLevel, DefaultLogLevel), Format: utils.GetString(logging.EnvLogFormat, DefaultLogFormat)},
 		ReconcilerBatchSize: DefaultReconcilerBatch,
 		SweeperInterval:     DefaultSweeperInterval,
 		ResolverCacheSize:   DefaultResolverCache,
@@ -86,6 +89,9 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 	if cfg.ResolverCacheSize, err = utils.GetInt(EnvResolverCache, DefaultResolverCache); err != nil {
+		return Config{}, err
+	}
+	if cfg.SeedEmployees, err = utils.GetInt(EnvSeedEmployees, DefaultSeedEmployees); err != nil {
 		return Config{}, err
 	}
 	if cfg.SweeperInterval, err = utils.GetDuration(EnvSweeperInterval, DefaultSweeperInterval); err != nil {
@@ -139,6 +145,9 @@ func (c Config) validate() error {
 	if c.ResolverCacheSize < 0 {
 		return fmt.Errorf("%s: must be >= 0, got %d", EnvResolverCache, c.ResolverCacheSize)
 	}
+	if c.SeedEmployees < 1 {
+		return fmt.Errorf("%s: must be >= 1, got %d", EnvSeedEmployees, c.SeedEmployees)
+	}
 	return nil
 }
 
@@ -161,5 +170,6 @@ func defaultsOnly() Config {
 		ReconcilerBatchSize: DefaultReconcilerBatch,
 		SweeperInterval:     DefaultSweeperInterval,
 		ResolverCacheSize:   DefaultResolverCache,
+		SeedEmployees:       DefaultSeedEmployees,
 	}
 }

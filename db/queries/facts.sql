@@ -6,6 +6,9 @@
 -- valid ranges for the same attribute).
 
 -- name: GetEmployeeFactsAsOf :many
+-- Latest-start fact covering the date wins; a later correction (same window,
+-- higher recorded_at) wins over it. No superseded_by filter here: interval
+-- closure (not suppression) governs attribute changes — see CloseOpenFactRange.
 SELECT DISTINCT ON (fe.attribute_key)
        fe.attribute_key,
        fe.value,
@@ -13,7 +16,6 @@ SELECT DISTINCT ON (fe.attribute_key)
 FROM fact_event fe
 WHERE fe.employee_id = sqlc.arg('employee_id')
   AND fe.valid_range @> sqlc.arg('as_of')::date
-  AND fe.superseded_by IS NULL
 ORDER BY fe.attribute_key, fe.valid_range DESC, fe.recorded_at DESC;
 
 -- name: GetEmployeeFactsAsOfAt :many
@@ -38,11 +40,15 @@ INSERT INTO fact_event (
 )
 RETURNING *;
 
--- name: SupersedeFactEvents :execrows
--- Mark all current (non-superseded) facts for this employee+attribute as
--- superseded by the new event. Runs in the same tx as InsertFactEvent.
+-- name: CloseOpenFactRange :execrows
+-- Interval closure per decision Q2 (end-exclusive, no gaps): when a new fact
+-- starts at F, the previous OPEN fact for the attribute ends at F. The
+-- business VALUE of the old fact is never modified — only its interval bound.
+-- Superseded_by stays reserved for value corrections (separate flow).
 UPDATE fact_event
-SET superseded_by = sqlc.arg('superseded_by')::bigint
+SET valid_range = daterange(lower(valid_range), sqlc.arg('new_start')::date, '[)')
 WHERE employee_id = sqlc.arg('employee_id')
   AND attribute_key = sqlc.arg('attribute_key')
-  AND superseded_by IS NULL;
+  AND superseded_by IS NULL
+  AND upper_inf(valid_range)
+  AND lower(valid_range) < sqlc.arg('new_start')::date;

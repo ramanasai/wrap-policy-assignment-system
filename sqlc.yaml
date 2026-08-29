@@ -29,3 +29,5 @@ sql:
             go_type: { type: "[]byte" }
           - column: "attribute_index.employee_ids"
             go_type: { type: "[]string" }
+          - column: "attribute_definition.enum_values"
+            go_type: { type: "[]string" }

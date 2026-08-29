@@ -196,7 +196,7 @@ CREATE TABLE attribute_index (
 -- ============================================================
 
 INSERT INTO policy_category (id, display_name, cardinality, resolution_strategy, default_priority) VALUES
-    ('manager',           'Manager',            'single', 'priority_rank',          100),
+    ('manager',           'Manager',            'single', 'explicit_user_choice',   100),
     ('pay_schedule',      'Pay Schedule',       'single', 'priority_rank',           50),
     ('benefits_plan',     'Benefits Plan',      'single', 'explicit_user_choice',    30),
     ('app_access',        'App Access',         'many',   'additive',                 0),

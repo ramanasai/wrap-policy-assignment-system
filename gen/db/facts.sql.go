@@ -11,6 +11,34 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const closeOpenFactRange = `-- name: CloseOpenFactRange :execrows
+UPDATE fact_event
+SET valid_range = daterange(lower(valid_range), $1::date, '[)')
+WHERE employee_id = $2
+  AND attribute_key = $3
+  AND superseded_by IS NULL
+  AND upper_inf(valid_range)
+  AND lower(valid_range) < $1::date
+`
+
+type CloseOpenFactRangeParams struct {
+	NewStart     pgtype.Date `json:"new_start"`
+	EmployeeID   string      `json:"employee_id"`
+	AttributeKey string      `json:"attribute_key"`
+}
+
+// Interval closure per decision Q2 (end-exclusive, no gaps): when a new fact
+// starts at F, the previous OPEN fact for the attribute ends at F. The
+// business VALUE of the old fact is never modified — only its interval bound.
+// Superseded_by stays reserved for value corrections (separate flow).
+func (q *Queries) CloseOpenFactRange(ctx context.Context, arg CloseOpenFactRangeParams) (int64, error) {
+	result, err := q.db.Exec(ctx, closeOpenFactRange, arg.NewStart, arg.EmployeeID, arg.AttributeKey)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const getEmployeeFactsAsOf = `-- name: GetEmployeeFactsAsOf :many
 
 SELECT DISTINCT ON (fe.attribute_key)
@@ -20,7 +48,6 @@ SELECT DISTINCT ON (fe.attribute_key)
 FROM fact_event fe
 WHERE fe.employee_id = $1
   AND fe.valid_range @> $2::date
-  AND fe.superseded_by IS NULL
 ORDER BY fe.attribute_key, fe.valid_range DESC, fe.recorded_at DESC
 `
 
@@ -41,6 +68,9 @@ type GetEmployeeFactsAsOfRow struct {
 // attribute snapshot a resolver needs, honoring (a) the valid-time window and
 // (b) post-correction visibility (latest recorded_at wins among overlapping
 // valid ranges for the same attribute).
+// Latest-start fact covering the date wins; a later correction (same window,
+// higher recorded_at) wins over it. No superseded_by filter here: interval
+// closure (not suppression) governs attribute changes — see CloseOpenFactRange.
 func (q *Queries) GetEmployeeFactsAsOf(ctx context.Context, arg GetEmployeeFactsAsOfParams) ([]GetEmployeeFactsAsOfRow, error) {
 	rows, err := q.db.Query(ctx, getEmployeeFactsAsOf, arg.EmployeeID, arg.AsOf)
 	if err != nil {
@@ -145,28 +175,4 @@ func (q *Queries) InsertFactEvent(ctx context.Context, arg InsertFactEventParams
 		&i.Trigger,
 	)
 	return i, err
-}
-
-const supersedeFactEvents = `-- name: SupersedeFactEvents :execrows
-UPDATE fact_event
-SET superseded_by = $1::bigint
-WHERE employee_id = $2
-  AND attribute_key = $3
-  AND superseded_by IS NULL
-`
-
-type SupersedeFactEventsParams struct {
-	SupersededBy int64  `json:"superseded_by"`
-	EmployeeID   string `json:"employee_id"`
-	AttributeKey string `json:"attribute_key"`
-}
-
-// Mark all current (non-superseded) facts for this employee+attribute as
-// superseded by the new event. Runs in the same tx as InsertFactEvent.
-func (q *Queries) SupersedeFactEvents(ctx context.Context, arg SupersedeFactEventsParams) (int64, error) {
-	result, err := q.db.Exec(ctx, supersedeFactEvents, arg.SupersededBy, arg.EmployeeID, arg.AttributeKey)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
 }

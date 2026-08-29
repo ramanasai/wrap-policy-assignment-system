@@ -4,6 +4,63 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/); entries are grouped by session/date,
 newest first.
 
+## [Unreleased] — 2026-08-28 (Session 6)
+
+### Added
+- **Repo layer (`internal/repo`)** — the single sqlc↔resolver conversion boundary:
+  - `FactsAt` (bitemporal as-of snapshot), `AddFact` (append + interval closure in
+    one tx), `AddEmployee`, `EffectiveRules` (predicate JSON round-trip),
+    `CreateRule` (rule + v1 version in one tx), `Category`/`ListCategories`,
+    `ResolveForEmployee` (full read-path orchestration with strict registry
+    validation), `PersistTrace`/`LatestTrace`, outbox `EmitEvent`/`Claim`
+    lifecycle, attribute-registry loading.
+  - 7 live-Postgres integration tests with a clean SKIP pattern (tests never
+    fail because infra is off).
+- **Shared test harness (`internal/testdb`)** — per-package isolated databases
+  (`pas_repo_test`, `pas_api_test`), hermetic migration re-application, inline
+  comment-aware statement splitter, reachability-probe skips.
+- **Seed script (`cmd/seed`)** — deterministic (fixed rand seed): 12 policies,
+  13 rules spanning every engine capability (specificity conflict, manual-able
+  exclusive, additive stacking, tenure gates, future-dated), 1,000 employees
+  with chained bitemporal facts in ~1.4s. Idempotent via employee count.
+- **HTTP API (`internal/api`, chi)** — implements docs/API.md: healthz/readyz,
+  POST /employees (with live-derived readiness checklist), POST /employees/{id}/
+  facts (with before/after gain-lose diff + transactional outbox emit),
+  GET /assignments (all categories, as-of), GET /explain (STORED trace only —
+  404 when absent, invariant #6), POST /rules (registry-validated, server-computed
+  specificity), POST /rules/preview (population-wide dry-run diff, no writes).
+  Request-ID + structured access logging middleware.
+- **API integration tests** — readiness, diff-on-relocation, rule create +
+  assignment flow, explain 404-vs-materialized honesty, preview no-write,
+  invalid-predicate rejection via the attribute registry.
+
+### Fixed
+- **Supersede wiped new facts (live test catch)** — `SupersedeFactEvents`
+  inside the same tx matched the row it was linking from, erasing both facts.
+  Replaced by the correct Q2 semantics: `CloseOpenFactRange` ends the previous
+  open interval at the new fact's start (exclusive); `superseded_by` is reserved
+  for value corrections. Resolver-level behavior unchanged; storage now matches
+  the documented `[start, end)` no-gap/no-overlap model.
+- **Missing hire_date broke tenure derivation via the API** — create-employee
+  now always records `hire_date` (anchor for derived attributes), matching seed.
+- **Transitive test-harness bugs** — statement splitter mangled inline comments;
+  BEGIN/COMMIT handling left transactions open. Extracted into testdb.
+- **Manager category seed semantics reconciled** — `priority_rank` →
+  `explicit_user_choice` in the migration seed, matching UX flows (closes the
+  Session 5 follow-up flag).
+- `.env`/`.env.example` DATABASE_URL port corrected to the dev cluster port.
+
+### Validated
+- All packages: vet clean, gofmt clean, `go test ./... -count=1` green.
+- Coverage: resolver 90.3%, utils 100%, config 87%, logging 86.2%,
+  repo 69.2% (live-DB paths), api 66.9%.
+- Live end-to-end: seed → API create employee → readiness → fact relocation
+  diff → rule create → assignments, all against real Postgres 16.15.
+- sqlc regenerated after query changes (CloseOpenFactRange).
+
+### Changed
+- `go.mod` + chi v5.3.2 dependency.
+
 ## [Unreleased] — 2026-08-28 (Session 5)
 
 ### Added

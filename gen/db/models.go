@@ -34,7 +34,7 @@ type AttributeDefinition struct {
 	Key         string   `json:"key"`
 	ValueType   string   `json:"value_type"`
 	AllowedOps  []string `json:"allowed_ops"`
-	EnumValues  []byte   `json:"enum_values"`
+	EnumValues  []string `json:"enum_values"`
 	Description *string  `json:"description"`
 }
 
