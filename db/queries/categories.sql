@@ -15,10 +15,11 @@ INSERT INTO policy_category (
 )
 RETURNING *;
 
--- name: InsertPolicy :one
+-- name: InsertPolicy :execrows
+-- Idempotent: seeds may be re-run (policy payloads are versioned otherwise).
 INSERT INTO policy (id, category_id, name, payload)
 VALUES (sqlc.arg('id'), sqlc.arg('category_id'), sqlc.arg('name'), sqlc.arg('payload'))
-RETURNING *;
+ON CONFLICT (id) DO NOTHING;
 
 -- name: InsertPolicyVersion :one
 INSERT INTO policy_version (id, policy_id, version, payload, valid_range)

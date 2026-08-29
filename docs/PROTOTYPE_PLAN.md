@@ -73,7 +73,7 @@ decision-trace demo as the single highest-signal artifact.
 
 ## Phase 5 — The demo (the graded artifact)
 
-- [ ] `make demo`: seeds → runs a scripted narrative:
+- [x] `make demo`: seeds → runs a scripted narrative:
       1. Onboard Priya → show readiness checklist output
       2. Save the CA tenure rule → show the 17-employee diff
       3. Change Priya's location CA→NY → show gain/lose diff + projection update
@@ -81,7 +81,7 @@ decision-trace demo as the single highest-signal artifact.
       5. Delete the winning rule → loser resurrects
       6. **`explain`**: "why does Priya have X as of March 3?" → human-readable trace
       7. Backdated correction → replay shows corrected history, original trace intact
-- [ ] `demo/` script + captured output committed to the repo
+- [x] `demo/` script + captured output committed to the repo
 - [ ] README quickstart: `docker compose up && make demo`
 
 ## Phase 6 — Submission polish

@@ -1,0 +1,107 @@
+
+══════════════════════════════════════════════════════════════════════════
+WARP POLICY ASSIGNMENT SYSTEM — SCRIPTED DEMO NARRATIVE
+══════════════════════════════════════════════════════════════════════════
+company: co_demo · employees: 1000 · date: 2026-08-29
+
+
+══════════════════════════════════════════════════════════════════════════
+[1] ONBOARD: PRIYA SHARMA — CA ENGINEERING MANAGER, 2.5-YEAR TENURE
+══════════════════════════════════════════════════════════════════════════
+    (→ POST /employees)
+
+    ✅ AUTO-APPLIED (10)
+       • app_access                   → Figma (via r_app_figma)
+       • app_access                   → GitHub (via r_app_github)
+       • app_access                   → Slack (via r_app_slack)
+       • benefits_plan                → 401k Match (via r_ben_401k)
+       • compliance_training          → CA Meal Break Policy (via r_train_ca_meal)
+       • compliance_training          → Security Awareness Training (via r_train_security)
+       • holiday_calendar             → California Holiday Calendar (via r_hol_ca)
+       • pay_schedule                 → US Bi-Weekly Pay (via r_pay_us_ft)
+       • time_off_vacation            → California Enhanced Vacation (via r_vac_ca_2yr)
+       • work_schedule                → Night Shift (via r_ws_night)
+    ⚠️  NEEDS YOUR DECISION (1)
+       • manager: Reports to Jordan Lee (Head of Eng) (rank 1)  vs  Reports to Dana Wu (VP People) (rank 2)
+    ✍️  MANUAL REQUIRED (1): [shift_policy]
+
+══════════════════════════════════════════════════════════════════════════
+[2] SAVE GATE: PREVIEW A RULE BEFORE IT EXISTS (no writes)
+══════════════════════════════════════════════════════════════════════════
+    (→ POST /rules/preview)
+    candidate: "NY Enhanced Vacation" effective TODAY (it's currently future-dated to 2027)
+    → 319 employees would GAIN the NY policy; 319 would LOSE their current vacation policy
+      ✚ emp_0003 → New York Enhanced Vacation (2027)
+      ✚ emp_0007 → New York Enhanced Vacation (2027)
+      ✚ emp_0015 → New York Enhanced Vacation (2027)
+      … +316 more
+      ➖ emp_0003 loses US Default Vacation
+      ➖ emp_0007 loses US Default Vacation
+      ➖ emp_0015 loses US Default Vacation
+    (nothing was written — the rule stays future-dated until 2027)
+
+══════════════════════════════════════════════════════════════════════════
+[3] PRIYA RELOCATES CA → NY
+══════════════════════════════════════════════════════════════════════════
+    (→ POST /employees/{id}/facts)
+    this change flips the following assignments:
+      ✚ gained: holiday_calendar → US Federal Holiday Calendar (rule matched after the change)
+      ✚ gained: manager → Reports to Jordan Lee (Head of Eng) (rule matched after the change)
+      ✚ gained: time_off_vacation → US Default Vacation (rule matched after the change)
+      ➖ lost:   compliance_training → CA Meal Break Policy (replaced by pol_train_security)
+      ➖ lost:   holiday_calendar → California Holiday Calendar (replaced by pol_hol_us)
+      ➖ lost:   time_off_vacation → California Enhanced Vacation (replaced by pol_vac_us_default)
+
+══════════════════════════════════════════════════════════════════════════
+[4] TENURE CROSSING — THE 2-YEAR GATE (shadowing flip, traced)
+══════════════════════════════════════════════════════════════════════════
+    (resolver as-of queries; traces written at decision time)
+    hire=2024-02-28 · tenure gate=730d · crossing date=2026-02-27
+    day before crossing (tenure 729):
+      → assigned: pol_vac_us_default (via r_vac_us)
+      · not matched: r_vac_ca_2yr — clause failed: tenure_days gte 730 (got 729)
+      at the crossing (tenure 730):
+      → assigned: pol_vac_ca_enhanced (via r_vac_ca_2yr)
+      · shadowed: r_vac_us (by r_vac_ca_2yr)
+    → the CA Enhanced rule now matches and SHADOWS the US default.
+      Shadowed matches persist: deleting the winner resurrects the default.
+
+══════════════════════════════════════════════════════════════════════════
+[5] DELETE THE WINNING RULE → THE LOSER RESURRECTS (scratch demo)
+══════════════════════════════════════════════════════════════════════════
+    scratch rule: is_manager → Executive Enhanced Vacation (priority 10)
+    subject: emp_0035 (a manager)
+    with scratch rule (manager subject):
+      → assigned: pol_vac_exec (via r_demo_scratch)
+      · shadowed: r_vac_us (by r_demo_scratch)
+      · not matched: r_vac_ca_2yr — clause failed: tenure_days gte 730 (got 159)
+    after scratch rule deleted:
+      → assigned: pol_vac_us_default (via r_vac_us)
+      · not matched: r_vac_ca_2yr — clause failed: tenure_days gte 730 (got 159)
+    → coverage did NOT vanish: the previous winner resurrected automatically.
+
+══════════════════════════════════════════════════════════════════════════
+[6] EXPLAIN — WHY DOES PRIYA HAVE X AS OF Z? (stored trace, immutable)
+══════════════════════════════════════════════════════════════════════════
+    (→ GET /employees/{id}/explain?category=time_off_vacation&as_of=<date>)
+    outcome: shadowed
+    facts snapshot: {"department":"Engineering","employment_type":"full_time","hire_date":"2024-02-28","is_manager":true,"level":"M2","location":"US-CA","segments":[],"tenure_days":730}
+    policy snapshot: {"cardinality":"single","category_id":"time_off_vacation","resolution_strategy":"priority_rank","rule_version_ids":["r_vac_ca_2yr:v1","r_vac_us:v1"]}
+    evaluated rules:
+      r_vac_ca_2yr           matched=true  outcome=winner          
+      r_vac_us               matched=true  outcome=shadowed         why_lost: lost specificity tiebreak to r_vac_ca_2yr (2 < 5)
+
+══════════════════════════════════════════════════════════════════════════
+[7] BACKDATED CORRECTION — HISTORY REPLAYS, TRACES DON'T MOVE
+══════════════════════════════════════════════════════════════════════════
+    (→ POST /employees/{id}/facts with valid_from in the past)
+    Priya was actually relocated on Feb 1 — the record lands today, backdated.
+    as-of 2026-02-10 (after the backdated correction):
+      → assigned: pol_vac_us_default (via r_vac_us)
+      · not matched: r_vac_ca_2yr — clause failed: tenure_days gte 730 (got 713)
+    → corrected history replays deterministically from events.
+    The trace written in step 6 is untouched (immutable audit artifact).
+
+══════════════════════════════════════════════════════════════════════════
+DEMO COMPLETE — every claim above is real, live data.
+══════════════════════════════════════════════════════════════════════════

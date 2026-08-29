@@ -4,6 +4,45 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/); entries are grouped by session/date,
 newest first.
 
+## [Unreleased] — 2026-08-28 (Session 9)
+
+### Added
+- **The scripted demo narrative (`cmd/demo`, `make demo`) — Phase 5, the
+  graded artifact.** Seven live steps against the seeded 1,000-employee
+  company, each annotated with its API endpoint:
+  1. Onboard Priya (CA Engineering manager, 2.5-yr tenure) → 10 auto-applied,
+     1 needs-decision (Jordan vs Dana, ranked), 1 manual;
+  2. Save gate — `/rules/preview` of the future-dated NY rule effective
+     today: 319 would gain, 319 would switch (nothing written);
+  3. Priya relocates CA→NY → exact gain/lose diff (switches vs true loss);
+  4. Tenure crossing at hire+730 → the CA Enhanced rule shadows the US
+     default, both traces shown;
+  5. Scratch rule wins → **deletion resurrects the previous winner**
+     (shadowed matches persist);
+  6. `explain` — the STORED trace with facts/policy snapshots + per-rule
+     why_lost (immutable);
+  7. Backdated correction (valid_from in the past) → history replays,
+     the earlier trace does not move.
+- **`repo.DeleteRule`** (rule + versions in one tx) — powers the
+  resurrection step; scratch-rule cleanup at demo start (idempotent runs).
+- **`InsertPolicy` made idempotent** (`ON CONFLICT (id) DO NOTHING`) so
+  seeds re-run safely; seeded `pol_vac_exec` (the step-5 scratch subject).
+- `make demo` target (seed-if-empty → run → `tee demo/output.txt`).
+  Captured output committed under `demo/output.txt`.
+
+### Fixed
+- Demo run-state bug (live-run catch): re-creating Priya each run leaked
+  her old facts (no FK cascade by decision), so historical facts from the
+  previous run won the as-of query. The demo now wipes all her rows
+  (facts, projection, traces, shadowed, memberships, employee).
+- Step 5 subject: no 5yr+ CA employee exists in the 1-4yr seed
+  distribution — redesigned around a manager + `is_manager` scratch rule
+  (any manager works; the flip is policy-visible).
+
+### Validated
+- `make demo` end-to-end exit 0 with real data; 7/7 packages green;
+  gofmt/vet clean; markdown validator clean.
+
 ## [Unreleased] — 2026-08-28 (Session 8)
 
 ### Added

@@ -44,5 +44,8 @@ INSERT INTO rule_version (
 )
 RETURNING *;
 
+-- name: DeleteRuleVersions :execrows
+DELETE FROM rule_version WHERE rule_id = sqlc.arg('rule_id');
+
 -- name: DeleteAssignmentRule :execrows
 DELETE FROM assignment_rule WHERE id = sqlc.arg('id');

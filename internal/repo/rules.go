@@ -91,6 +91,29 @@ func (s *Store) CreateRule(ctx context.Context, id, companyID, categoryID, polic
 	return nil
 }
 
+// DeleteRule removes a rule and its versions (cascade via repo semantics;
+// no DB-level FK by decision). The reconciler's rule_changed fan-out runs
+// after deletion so shadowed matches resurrect deterministically.
+func (s *Store) DeleteRule(ctx context.Context, ruleID string) error {
+	tx, err := s.Pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("repo: delete rule: begin: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	qtx := s.Q.WithTx(tx)
+	if _, err := qtx.DeleteRuleVersions(ctx, ruleID); err != nil {
+		return fmt.Errorf("repo: delete rule %s: versions: %w", ruleID, err)
+	}
+	if _, err := qtx.DeleteAssignmentRule(ctx, ruleID); err != nil {
+		return fmt.Errorf("repo: delete rule %s: %w", ruleID, err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("repo: delete rule %s: commit: %w", ruleID, err)
+	}
+	return nil
+}
+
 // timestamptzOrNow converts a pgtype.Timestamptz; a NULL created_at (possible
 // only via hand-seeded rows) falls back to now — deterministic per-invocation
 // is not required here because it's a repair path, not a decision path.

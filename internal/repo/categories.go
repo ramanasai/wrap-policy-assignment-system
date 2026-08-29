@@ -47,7 +47,7 @@ func (s *Store) ListCategories(ctx context.Context) ([]resolver.CategoryConfig, 
 
 // AddPolicy + AddPolicyVersion support seeding/demo flows.
 func (s *Store) AddPolicy(ctx context.Context, id, categoryID, name string) error {
-	_, err := s.Q.InsertPolicy(ctx, db.InsertPolicyParams{
+	n, err := s.Q.InsertPolicy(ctx, db.InsertPolicyParams{
 		ID:         id,
 		CategoryID: categoryID,
 		Name:       name,
@@ -55,6 +55,9 @@ func (s *Store) AddPolicy(ctx context.Context, id, categoryID, name string) erro
 	})
 	if err != nil {
 		return fmt.Errorf("repo: add policy %s: %w", id, err)
+	}
+	if n == 0 {
+		return nil // idempotent: already present
 	}
 	return nil
 }

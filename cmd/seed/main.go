@@ -94,6 +94,9 @@ func seedPoliciesAndRules(ctx context.Context, store *repo.Store, logger zerolog
 		{"pol_shift_hourly_us", "shift_policy", "US Hourly Overtime & Clock-In Rules"},
 		{"pol_hol_us", "holiday_calendar", "US Federal Holiday Calendar"},
 		{"pol_hol_ca", "holiday_calendar", "California Holiday Calendar"},
+		// Step-5 demo subject: the scratch rule assigns THIS policy, then its
+		// deletion resurrects whatever the winner was before.
+		{"pol_vac_exec", "time_off_vacation", "Executive Enhanced Vacation (demo)"},
 	}
 	for _, p := range policies {
 		if err := store.AddPolicy(ctx, p.id, p.cat, p.name); err != nil {

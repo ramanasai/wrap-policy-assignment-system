@@ -73,10 +73,10 @@ func (q *Queries) InsertCategory(ctx context.Context, arg InsertCategoryParams) 
 	return i, err
 }
 
-const insertPolicy = `-- name: InsertPolicy :one
+const insertPolicy = `-- name: InsertPolicy :execrows
 INSERT INTO policy (id, category_id, name, payload)
 VALUES ($1, $2, $3, $4)
-RETURNING id, category_id, name, payload
+ON CONFLICT (id) DO NOTHING
 `
 
 type InsertPolicyParams struct {
@@ -86,21 +86,18 @@ type InsertPolicyParams struct {
 	Payload    []byte `json:"payload"`
 }
 
-func (q *Queries) InsertPolicy(ctx context.Context, arg InsertPolicyParams) (Policy, error) {
-	row := q.db.QueryRow(ctx, insertPolicy,
+// Idempotent: seeds may be re-run (policy payloads are versioned otherwise).
+func (q *Queries) InsertPolicy(ctx context.Context, arg InsertPolicyParams) (int64, error) {
+	result, err := q.db.Exec(ctx, insertPolicy,
 		arg.ID,
 		arg.CategoryID,
 		arg.Name,
 		arg.Payload,
 	)
-	var i Policy
-	err := row.Scan(
-		&i.ID,
-		&i.CategoryID,
-		&i.Name,
-		&i.Payload,
-	)
-	return i, err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const insertPolicyVersion = `-- name: InsertPolicyVersion :one

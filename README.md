@@ -88,6 +88,14 @@ Nothing is patched; everything is recomputed.
 - **Inverted attribute index** means a rule or attribute change recomputes only the affected
   diff (employees entering/leaving each rule's scope), not the whole company.
 
+## Quickstart (demo)
+
+```bash
+make migrate   # apply schema to local Postgres (port 55432)
+make demo      # seed the demo company (1k employees) + run the scripted narrative
+cat demo/output.txt   # the captured run
+```
+
 ## Status
 
 - [x] Scoping questions answered (`DECISIONS.md`)

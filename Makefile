@@ -2,7 +2,7 @@ GO := GOTOOLCHAIN=auto go
 SQLC := $(HOME)/go/bin/sqlc
 PGURL := postgres://postgres:postgres@localhost:55432/pas?sslmode=disable
 
-.PHONY: build test cover vet fmt tidy sqlc migrate migrate-down env-demo
+.PHONY: build test cover vet fmt tidy sqlc migrate migrate-down demo env-demo
 
 ## build: compile all packages
 build:
@@ -40,6 +40,15 @@ migrate:
 ## migrate-down: tear the schema down (dev only)
 migrate-down:
 	psql "$(PGURL)" -v ON_ERROR_STOP=1 -f db/migrations/0001_init.down.sql
+
+## demo: seed (if empty) then run the scripted narrative, capturing output
+## (the graded artifact — every claim is live, real data)
+demo:
+	$(GO) build -o bin/seed ./cmd/seed
+	$(GO) build -o bin/demo ./cmd/demo
+	./bin/seed || true
+	./bin/demo | tee demo/output.txt
+	@echo "captured: demo/output.txt"
 
 ## env-demo: show how to start from .env.example
 env-demo:

@@ -23,6 +23,18 @@ func (q *Queries) DeleteAssignmentRule(ctx context.Context, id string) (int64, e
 	return result.RowsAffected(), nil
 }
 
+const deleteRuleVersions = `-- name: DeleteRuleVersions :execrows
+DELETE FROM rule_version WHERE rule_id = $1
+`
+
+func (q *Queries) DeleteRuleVersions(ctx context.Context, ruleID string) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteRuleVersions, ruleID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const getEffectiveRuleVersionsAsOf = `-- name: GetEffectiveRuleVersionsAsOf :many
 
 SELECT DISTINCT ON (rv.rule_id)
