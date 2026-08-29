@@ -8,6 +8,14 @@ Start here. Everything else in the repo supports this page.
 
 ---
 
+## 🗺️ Interactive system map
+
+**Open the clickable map of the whole system**
+(guided views: decision path · change propagation · explain/audit):
+
+→ **`system-map/index.html`** — or live at the Pages URL once enabled
+(the source is `system-map/architecture.json`, rendered with Archify).
+
 ## The pitch (one paragraph)
 
 Every feature in Warp — pay schedules, vacation policies, app access,

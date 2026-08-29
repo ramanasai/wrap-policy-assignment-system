@@ -1,0 +1,376 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Policy Assignment System",
+    "subtitle": "Bitemporal rules over employee context \u2192 derived, traced assignments",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "decision-path",
+        "label": "Decision path",
+        "focus": [
+          "admin",
+          "api",
+          "resolver",
+          "db"
+        ],
+        "note": "Any date \u2192 pure resolution of effective rules over effective facts."
+      },
+      {
+        "id": "change-propagation",
+        "label": "Change propagation",
+        "focus": [
+          "api",
+          "outbox",
+          "worker",
+          "sweeper",
+          "projection"
+        ],
+        "note": "Facts, rules, and segment changes flow through the outbox into the reconciler; the sweeper absorbs any missed event."
+      },
+      {
+        "id": "audit",
+        "label": "Explain / audit",
+        "focus": [
+          "admin",
+          "api",
+          "traces",
+          "resolver"
+        ],
+        "note": "Why does X have Y as of Z? Always from the stored, immutable trace."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "admin",
+      "type": "external",
+      "label": "Admin / HR Ops",
+      "sublabel": "form builder \u00b7 previews",
+      "pos": [
+        40,
+        250
+      ],
+      "size": [
+        140,
+        62
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "API",
+      "sublabel": "chi \u00b7 :8080",
+      "pos": [
+        230,
+        250
+      ],
+      "size": [
+        130,
+        62
+      ],
+      "tag": "readiness \u00b7 diffs"
+    },
+    {
+      "id": "resolver",
+      "type": "backend",
+      "label": "Resolver",
+      "sublabel": "pure Go \u00b7 zero deps",
+      "pos": [
+        420,
+        244
+      ],
+      "size": [
+        150,
+        74
+      ],
+      "tag": "total order tie-breaks"
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "PostgreSQL 16",
+      "sublabel": "bitemporal events",
+      "pos": [
+        650,
+        110
+      ],
+      "size": [
+        150,
+        70
+      ]
+    },
+    {
+      "id": "outbox",
+      "type": "messagebus",
+      "label": "Outbox",
+      "sublabel": "transactional queue",
+      "pos": [
+        650,
+        300
+      ],
+      "size": [
+        130,
+        62
+      ],
+      "tag": "idempotency keys"
+    },
+    {
+      "id": "traces",
+      "type": "database",
+      "label": "Decision Traces",
+      "sublabel": "immutable \u00b7 as-of",
+      "pos": [
+        650,
+        490
+      ],
+      "size": [
+        140,
+        62
+      ]
+    },
+    {
+      "id": "projection",
+      "type": "database",
+      "label": "Assignments",
+      "sublabel": "rebuildable cache",
+      "pos": [
+        880,
+        110
+      ],
+      "size": [
+        140,
+        62
+      ]
+    },
+    {
+      "id": "worker",
+      "type": "backend",
+      "label": "Reconciler",
+      "sublabel": "LISTEN \u00b7 SKIP LOCKED",
+      "pos": [
+        880,
+        300
+      ],
+      "size": [
+        140,
+        62
+      ],
+      "tag": "dead-letter @ max retries"
+    },
+    {
+      "id": "sweeper",
+      "type": "backend",
+      "label": "Sweeper",
+      "sublabel": "expected vs actual",
+      "pos": [
+        880,
+        490
+      ],
+      "size": [
+        120,
+        60
+      ],
+      "tag": "drift backstop"
+    },
+    {
+      "id": "scheduler",
+      "type": "backend",
+      "label": "Scheduler",
+      "sublabel": "future-dated gates",
+      "pos": [
+        1120,
+        120
+      ],
+      "size": [
+        130,
+        60
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Policy Assignment System \u2014 service + source of truth",
+      "wraps": [
+        "api",
+        "resolver",
+        "db",
+        "outbox",
+        "traces",
+        "projection",
+        "worker",
+        "sweeper",
+        "scheduler"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "admin-api",
+      "from": "admin",
+      "to": "api",
+      "label": "REST \u00b7 rule AST",
+      "variant": "emphasis",
+      "labelAt": [
+        205,
+        320
+      ]
+    },
+    {
+      "id": "api-resolver",
+      "from": "api",
+      "to": "resolver",
+      "label": "facts \u00b7 rules @ date",
+      "labelAt": [
+        405,
+        336
+      ]
+    },
+    {
+      "id": "resolver-db",
+      "from": "resolver",
+      "to": "db",
+      "label": "bitemporal reads"
+    },
+    {
+      "id": "api-outbox",
+      "from": "api",
+      "to": "outbox",
+      "label": "emit (same tx)",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "left",
+      "via": [
+        [
+          295,
+          610
+        ],
+        [
+          610,
+          610
+        ],
+        [
+          610,
+          331
+        ]
+      ]
+    },
+    {
+      "id": "outbox-worker",
+      "from": "outbox",
+      "to": "worker",
+      "label": "NOTIFY / claim"
+    },
+    {
+      "id": "worker-projection",
+      "from": "worker",
+      "to": "projection",
+      "label": "materialize"
+    },
+    {
+      "id": "worker-traces",
+      "from": "worker",
+      "to": "traces",
+      "label": "trace @ decision",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "via": [
+        [
+          950,
+          420
+        ],
+        [
+          720,
+          420
+        ],
+        [
+          720,
+          490
+        ]
+      ]
+    },
+    {
+      "id": "sweeper-projection",
+      "from": "sweeper",
+      "to": "projection",
+      "label": "expected vs actual \u00b7 repair",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "top",
+      "via": [
+        [
+          1080,
+          520
+        ],
+        [
+          1080,
+          70
+        ],
+        [
+          950,
+          70
+        ]
+      ]
+    },
+    {
+      "id": "scheduler-outbox",
+      "from": "scheduler",
+      "to": "outbox",
+      "label": "tenure gates \u00b7 Jan-1 rules",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "left",
+      "via": [
+        [
+          1320,
+          150
+        ],
+        [
+          1320,
+          650
+        ],
+        [
+          630,
+          650
+        ],
+        [
+          630,
+          331
+        ]
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Resolution",
+      "items": [
+        "Pure deterministic function of (facts, rules, date, category)",
+        "Total tie-break: manual > priority > specificity > created_at > id",
+        "Losers are shadowed, not discarded \u2014 deleting a winner resurrects them"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Reconciliation",
+      "items": [
+        "Transactional outbox \u2192 reconciler (FOR UPDATE SKIP LOCKED)",
+        "Sweeper absorbs missed events; segments re-derive membership",
+        "Scheduler fires future-dated transitions with dated keys",
+        "Materialized assignments push to provisioning \u2014 eventual and idempotent"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Auditability",
+      "items": [
+        "Every decision persists an immutable trace at decision time",
+        "Explain answers from the stored snapshot \u2014 never recomputed",
+        "Facts and rules are bitemporal: history replays deterministically"
+      ]
+    }
+  ]
+}
