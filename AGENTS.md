@@ -41,22 +41,25 @@ follows `docs/PROTOTYPE_PLAN.md`.
    repository layer; do not add `REFERENCES` clauses to migrations. The FK graph in
    `docs/DATA_MODEL.md`'s erDiagram documents the expected invariants only.
 
-## Commands (once Phase 0–1 scaffolding exists)
+## Commands (kept accurate — stale commands are worse than no commands)
 
 ```bash
-make migrate      # golang-migrate up
-make sqlc         # sqlc generate
-make seed         # load demo company (db/seed)
-make test         # go test ./... (unit + property tests)
-make run          # docker compose up (Postgres) + go run ./cmd/server
-make demo         # scripted narrative demo (Phase 5)
+make test         # go test ./... (unit + property tests) via Go 1.27 toolchain
+make cover        # tests + coverage summary
+make vet          # go vet ./...
+make sqlc         # regenerate gen/db from db/queries (requires sqlc in PATH)
+make migrate      # apply migrations to local dev DB (postgres://localhost:55432/pas)
+make migrate-down # tear schema down (dev only)
+make build        # compile all packages
+make tidy         # go mod tidy
 ```
 
-Update this section the moment commands change — stale commands are worse than no commands.
+Configuration: copy `.env.example` to `.env` (gitignored); `internal/config`
+loads typed config with fail-fast validation on invalid values.
 
 ## Conventions
 
-- Go: `gofmt`, `go vet`, small interfaces; log with `slog`; no panics across package
+- Go: `gofmt`, `go vet`, small interfaces; log through `internal/logging` (zerolog) — never import zerolog directly in feature packages; no panics across package
   boundaries.
 - SQL lives in `db/queries/*.sql` (sqlc); no query strings in Go code.
 - Docs: keep pros/cons honest in `docs/TRADEOFFS.md`; if you add a limitation in code, add

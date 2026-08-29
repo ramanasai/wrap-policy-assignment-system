@@ -1,0 +1,31 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    # The migration file is the single source of truth for schema shape.
+    # (sqlc parses CREATE TABLE/INDEX; BEGIN/COMMIT are tolerated.)
+    schema: "db/migrations/0001_init.up.sql"
+    queries: "db/queries"
+    gen:
+      go:
+        package: "db"
+        out: "gen/db"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_pointers_for_null_types: true
+        overrides:
+          # JSONB columns map to []byte so the repo layer owns JSON decoding
+          # into resolver types (the only conversion boundary).
+          - column: "fact_event.value"
+            go_type: { type: "[]byte" }
+          - column: "rule_version.predicate"
+            go_type: { type: "[]byte" }
+          - column: "decision_trace.facts_snapshot"
+            go_type: { type: "[]byte" }
+          - column: "decision_trace.policy_snapshot"
+            go_type: { type: "[]byte" }
+          - column: "decision_trace.evaluated"
+            go_type: { type: "[]byte" }
+          - column: "outbox.payload"
+            go_type: { type: "[]byte" }
+          - column: "attribute_index.employee_ids"
+            go_type: { type: "[]string" }

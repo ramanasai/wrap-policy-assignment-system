@@ -4,6 +4,70 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/); entries are grouped by session/date,
 newest first.
 
+## [Unreleased] — 2026-08-28 (Session 5)
+
+### Added
+- **Pure Go resolver (`resolver/`)** — the heart of the system, zero dependencies:
+  - `types.go` — CategoryConfig, RuleVersion, Result, outcomes (mirror schema enums)
+  - `ast.go` — canonical rule AST: parse, strict validation against attribute
+    definitions (op legality, value types, enum membership), predicate evaluation
+  - `value.go` — normalized comparables (number/string/bool); evaluation is total:
+    unknown shapes surface as deterministic why_not reasons, never panics
+  - `facts.go` — Facts, AttributeDefinition registry, derived attributes
+    (tenure_days from hire_date, clamped ≥0, explicit-wins semantics)
+  - `specificity.go` — automatic specificity from the AST (eq=3, in/range=2,
+    exclusion=1); pure function, never admin-declared
+  - `conflicts.go` — deterministic total order (manual > priority > specificity >
+    created_at > id), SortMatched, lossReason explaining the first lost dimension
+  - `trace.go` — decision traces: per-rule evaluations, rank positions, fact &
+    policy snapshots (deep-copied), short answer layer
+  - `resolve.go` — Resolve(): filter → order → select (winner+shadow / additive /
+    needs-decision) → trace; strict strategy/cardinality validation
+- **Tests with 88.9% statement coverage** — industry-level, table-driven:
+  - determinism: same input → byte-identical JSON output (100-iteration loops)
+  - permutation invariance: 200 seeded rule-shuffles → identical resolution
+  - antisymmetry + transitivity sweep of the full tie-break matrix
+  - shadowing semantics (winner deletion resurrects losers — enabled by
+    persisted shadowed matches)
+  - snapshot immutability against caller mutation after Resolve
+  - tenure-crossing integration (730-day gate: day-of matches, day-before doesn't)
+  - error taxonomy: invalid dates, config mismatches, bad predicates (with rule IDs)
+- **zerolog logging system (`internal/logging`)** — slog decision reversed;
+  component loggers (api/reconciler/scheduler/sweeper), request-ID propagation,
+  JSON default + console dev format, env-driven levels. `Build()` is pure for
+  tests; `SetupFromEnv()` applies process globals. Resolver stays log-free.
+- **Env config system (`internal/utils`, `internal/config`)** — typed getters
+  (Get{String,Int,Duration,Bool}, Require) with fail-fast named errors on
+  invalid values; godotenv .env loading (host env wins); config validation
+  (APP_ENV, port range, prod-requires-DATABASE_URL, level/format whitelists).
+- **`.env.example` + `.env`** — documented template; `.env` gitignored.
+- **Makefile** — build/test/cover/vet/fmt/tidy/sqlc/migrate/migrate-down.
+- **sqlc data layer** — `sqlc.yaml` (schema = the migration file, pgx/v5 output,
+  JSONB→[]byte overrides at the repo boundary) + `db/queries/`: facts.sql
+  (bitemporal as-of, post-correction visibility, supersession), rules.sql
+  (effective-dated version selection via DISTINCT ON), traces.sql (write-once
+  audit + retention count), outbox.sql (FOR UPDATE SKIP LOCKED claiming,
+  dead-lettering), index.sql (Supergroup inverted index upsert/lookup).
+  Generated typed Go in `gen/db`.
+
+### Validated
+- All packages: `go vet` clean, `go test ./... -count=1` green, 88.9% coverage.
+- **sqlc queries validated live** on Postgres 16.15 with seeded fixtures:
+  as-of fact views, effective rule selection (correct empty-before-validity,
+  single-row DISTINCT ON after), outbox claim pattern (attempts increment,
+  unprocessed count), migration up/down cycle.
+- sqlc config path learning recorded: config lives at repo root (paths resolve
+  relative to it); JSONB overrides need struct-form `{ type: "[]byte" }`.
+
+### Changed
+- Go toolchain: GOTOOLCHAIN=auto downloads go1.27.0 as pinned in go.mod.
+- Logging choice reversed: slog → zerolog (TECH_STACK.md updated).
+
+### Known follow-ups (flagged, not hidden)
+- Manager category currently seeds `priority_rank`; UX flows show manager
+  conflicts surfacing as `explicit_user_choice` decisions. Reconcile when the
+  Phase-1 seed script lands.
+
 ## [Unreleased] — 2026-08-28 (Session 4)
 
 ### Fixed

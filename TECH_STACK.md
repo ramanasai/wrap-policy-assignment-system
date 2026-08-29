@@ -17,7 +17,7 @@ for a take-home that a senior engineer can read in 30 minutes and trust.
 | Task queue / events | **Postgres `LISTEN/NOTIFY` + outbox table** (v1) | No extra infra; the outbox IS the audit trail. NATS JetStream swap-in later |
 | Scheduler | **Postgres-backed job table + worker goroutine** | Future-dated changes are just rows with `effective_date` in the future |
 | Caching (read path) | **In-process LRU keyed on policy-snapshot version** (`hashicorp/golang-lru`) | Cache invalidation = version bump; no Redis needed for the demo |
-| Logging / metrics | **slog (structured) + Prometheus** | slog is stdlib; per-decision latency and reconciliation lag as counters |
+| Logging / metrics | **zerolog (structured JSON) + Prometheus** | zero-allocation JSON logging; loggers injected via `internal/logging`, never imported ad hoc |
 | Frontend (walkthrough) | **Figma mockups + static HTML** | UX criterion asks for flows, not a production SPA |
 | Diagrams | **Mermaid in-repo** | Diagrams live beside the code, diffable in PRs |
 
@@ -105,20 +105,25 @@ Temporal/workflow engines (wrong abstraction — this is a decision system, not 
 │   └── PROTOTYPE_PLAN.md
 ├── cmd/
 │   └── server/              # single static binary: api + workers
+├── sqlc.yaml                # sqlc config: migration schema → gen/db typed Go
 ├── db/
-│   ├── migrations/          # golang-migrate SQL migrations
-│   ├── queries/             # sqlc .sql files (facts.sql, rules.sql, traces.sql, outbox.sql)
-│   ├── sqlc.yaml
+│   ├── migrations/          # golang-migrate-compatible SQL migrations
+│   ├── queries/             # sqlc .sql files (facts, rules, traces, outbox, index)
 │   └── seed/                # demo company: 1k employees, 5 policy categories
-├── gen/                     # sqlc-generated typed Go (committed or go:generate)
+├── gen/                     # sqlc-generated typed Go (pgx/v5) — DO NOT hand-edit
 │   └── db/
-├── resolver/                # PURE — no I/O, no framework deps
-│   ├── ast.go               #   rule AST types + JSON (un)marshaling
+├── resolver/                # PURE — no I/O, no framework deps, NO logging
+│   ├── ast.go               #   rule AST types + JSON parse/validate/matches
+│   ├── value.go             #   normalized comparables + clause evaluation
+│   ├── facts.go             #   Facts, attribute definitions, derived attrs (tenure)
 │   ├── specificity.go       #   automatic specificity ranking from AST
 │   ├── conflicts.go         #   tie-break total order + shadowing
-│   ├── resolve.go           #   Resolve(facts, rules, category, date) → ResolutionResult
-│   └── trace.go             #   decision-trace construction
+│   ├── trace.go             #   decision-trace construction
+│   └── resolve.go           #   Resolve(input) → Result (assignments+trace)
 ├── internal/
+│   ├── config/              # typed env config (Load/MustLoad; fail-fast validation)
+│   ├── logging/             # zerolog setup: component loggers, request IDs
+│   ├── utils/               # env getters, .env loading, date helpers
 │   ├── repo/                #   converts sqlc rows ↔ resolver types (the only boundary)
 │   ├── api/                 #   chi routes: rules, employees, resolve, explain, preview
 │   ├── events/              #   outbox writer + LISTEN/NOTIFY bridge
