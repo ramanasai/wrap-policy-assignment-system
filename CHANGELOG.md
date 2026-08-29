@@ -4,6 +4,34 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/); entries are grouped by session/date,
 newest first.
 
+## [Unreleased] — 2026-08-28 (Session 13 — doc sweep + SSH remote)
+
+### Changed
+- **Every markdown file audited against current reality** (one by one) and
+  corrected:
+  - Counts aligned with the live DB: **9 categories, 20 policies, 18
+    rules, 2 segments, 1,000+ employees** (PROTOTYPE_PLAN, UX_FLOWS, seed
+    comments; TECH_STACK seed line; earlier “6 categories / 13 rules /
+    5 categories” references fixed).
+  - AGENTS.md doc map + Current status brought up to date (SUBMISSION.md,
+    system-map/, EMAIL_DRAFT, all phases done, CI/docker caveats).
+  - README/SUBMISSION/TECH_STACK layouts include the new artifacts
+    (SUBmission front door, system-map/, LICENSE, four cmd/ binaries).
+  - TRADEOFFS gains two honest limitation rows: docker image build
+    unverified on this network, CI not yet enabled (workflow scope).
+  - PROTOTYPE_PLAN Phase 5/6 checkboxes completed; DATA_MODEL documents the
+    idempotent outbox insert.
+- **Git remote switched to SSH** (`git@github.com\:ramanasai/...)` —
+  HTTPS pushes were intermittently blocked; SSH auth + push verified.
+
+### Fixed
+- The CI workflow was being re-staged by every `git add -A` (causing
+  OAuth-scope push rejections). Untracked it and added it to
+  `.git/info/exclude` — the file stays on disk, ready to commit once the
+  token gains `workflow` scope (`gh auth refresh -h github.com -s workflow`).
+  Repo now pushes clean and is in sync with origin afterwards (verified
+  via `git ls-remote`).
+
 ## [Unreleased] — 2026-08-28 (Session 12 — interactive system map)
 
 ### Added

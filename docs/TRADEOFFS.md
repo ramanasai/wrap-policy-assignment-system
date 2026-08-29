@@ -95,6 +95,8 @@ them as reviewed SQL with compile-checked Go bindings.
 | **Custom attributes supported by schema, seeded minimally** | Demo shows 6 standard attributes | Registry is live; adding attributes is data, not code |
 | **Retention/aggregation of old traces not implemented** | Trace table grows | Documented policy: full traces for audit window, winner-only summaries beyond |
 | **Reconciler affected-sets via inverted index, not tested at 100k scale** | Scale claims are architectural, not benchmarked | Seed 100k synthetic employees; benchmark chunked recompute |
+| **Docker image build unverified** (dev network cannot reach Docker Hub) | Compose YAML is config-validated (`docker compose config`); every binary is locally built + live-tested | Build on any network with Hub access; CI would run the image |
+| **CI not enabled on GitHub** | Workflow file ready but pushing it needs a `workflow`-scoped token | `gh auth refresh -h github.com -s workflow`, then commit `.github/workflows/ci.yml` |
 | **No multi-company tenancy enforcement in resolver** | Demo is single-company | `company_id` scoping at the repository layer (already in schema) |
 
 ## Deliberate non-goals

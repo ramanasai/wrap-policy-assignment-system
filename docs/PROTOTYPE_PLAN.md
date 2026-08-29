@@ -20,8 +20,8 @@ decision-trace demo as the single highest-signal artifact.
       pending — see validation notes below), demo-category seed rows
 - [x] sqlc queries: `facts.sql` (as-of), `rules.sql` (effective versions), `traces.sql`,
       `outbox.sql`, `index.sql`, `categories.sql`, `employees.sql` → `gen/db`
-- [x] Seed script (`cmd/seed`): 1 company, 1,000 employees, 6 categories, 13 rules — including the
-      canonical demo cases:
+- [x] Seed script (`cmd/seed`): 1 company, 1,000 employees, 9 categories, 20 policies, 18 rules, 2 segments — including the canonical
+      demo cases:
       - CA 2yr+ tenure vacation rule (specificity conflict)
       - Manual override on one pay schedule (priority conflict)
       - Contractor shift-policy rule (attribute conjuncts)
@@ -82,10 +82,10 @@ decision-trace demo as the single highest-signal artifact.
       6. **`explain`**: "why does Priya have X as of March 3?" → human-readable trace
       7. Backdated correction → replay shows corrected history, original trace intact
 - [x] `demo/` script + captured output committed to the repo
-- [ ] README quickstart: `docker compose up && make demo`
+- [x] README quickstart updated: `docker compose up --build` path + local `make` path
 
 ## Phase 6 — Submission polish
 
 - [x] Final pass over all docs; cross-link every claim to code or trace output
-- [ ] `AGENTS.md` accuracy check (commands actually work)
+- [x] `AGENTS.md` accuracy check (commands actually work)
 - [x] Email-ready summary (docs/EMAIL_DRAFT.md) + SUBMISSION.md front door

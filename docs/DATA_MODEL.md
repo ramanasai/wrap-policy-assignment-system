@@ -258,6 +258,8 @@ CREATE TABLE outbox (
     processed_at    TIMESTAMPTZ,
     attempts        INT NOT NULL DEFAULT 0
 );
+-- Inserts are idempotent: ON CONFLICT (idempotency_key) DO NOTHING, so
+-- retried emits (API retries, re-run dated scheduler keys) are safe no-ops.
 ```
 
 ### Inverted index — the reconciliation accelerator

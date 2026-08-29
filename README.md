@@ -24,9 +24,11 @@ time off, pay schedules, app access, compliance trainings, benefits, managers, a
 | File | What it covers |
 |---|---|
 | [`README.md`](./README.md) | This overview |
+| [`SUBMISSION.md`](./SUBMISSION.md) | **Grader front door** — pitch, criteria→evidence, how to run, map |
 | [`DECISIONS.md`](./DECISIONS.md) | The 16 scoping questions, answered and sourced (council record) |
 | [`TECH_STACK.md`](./TECH_STACK.md) | Infrastructure choices, tools & services, pros/cons |
 | [`AGENTS.md`](./AGENTS.md) | Repo guide for coding agents/humans: invariants, commands, conventions |
+| [`system-map/`](./system-map/) | Interactive system map (Archify): `index.html` + preview |
 
 **`docs/`:**
 

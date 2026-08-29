@@ -93,23 +93,33 @@ Temporal/workflow engines (wrong abstraction — this is a decision system, not 
 .
 ├── README.md
 ├── AGENTS.md                # repo guide: invariants, commands, conventions
+├── SUBMISSION.md            # grader front door: criteria → evidence mapping
 ├── TECH_STACK.md            ← you are here
 ├── DECISIONS.md
+├── LICENSE                  # MIT
+├── system-map/              # interactive system map (Archify)
+│   ├── architecture.json    #   typed IR (source of truth)
+│   ├── index.html           #   self-contained interactive map
+│   └── preview.png          #   rendered preview (embedded in README)
 ├── docs/
 │   ├── ARCHITECTURE.md
 │   ├── DATA_MODEL.md
 │   ├── API.md               # HTTP contract + canonical rule AST
 │   ├── UX_FLOWS.md
+│   ├── EMAIL_DRAFT.md           # ready-to-send submission email
 │   ├── SCALE_NOTES.md       # distilled 100k+ patterns that touch THIS system
 │   ├── TRADEOFFS.md
 │   └── PROTOTYPE_PLAN.md
 ├── cmd/
-│   └── server/              # single static binary: api + workers
+│   ├── server/              # chi API binary (:8080, graceful shutdown)
+│   ├── worker/              # reconciler + sweeper + scheduler
+│   ├── seed/                # deterministic demo company
+│   └── demo/                # scripted narrative (make demo / docker run --rm demo)
 ├── sqlc.yaml                # sqlc config: migration schema → gen/db typed Go
 ├── db/
 │   ├── migrations/          # golang-migrate-compatible SQL migrations
 │   ├── queries/             # sqlc .sql files (facts, rules, traces, outbox, index)
-│   └── seed/                # demo company: 1k employees, 5 policy categories
+│   └── seed/                # demo company: 1k employees, 9 categories
 ├── gen/                     # sqlc-generated typed Go (pgx/v5) — DO NOT hand-edit
 │   └── db/
 ├── resolver/                # PURE — no I/O, no framework deps, NO logging

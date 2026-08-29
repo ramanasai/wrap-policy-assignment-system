@@ -14,7 +14,7 @@ flowchart TD
     A[Admin signs up] --> B{"Has employee data?<br/>(HRIS import / CSV)"}
     B -- yes --> C[Import employees<br/>attribute registry auto-detects fields]
     B -- no --> D[Add employees manually<br/>or start with policy setup first]
-    C --> E["Policy catalog walkthrough:<br/>5 categories pre-created, admin renames + adds policies"]
+    C --> E["Policy catalog walkthrough:<br/>9 categories pre-created, admin renames + adds policies"]
     D --> E
     E --> F["Suggested starter rules:<br/>seeded templates per category,<br/>each shown with live headcount preview"]
     F --> G{Accept / edit / skip each?}

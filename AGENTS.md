@@ -13,16 +13,19 @@ follows `docs/PROTOTYPE_PLAN.md`.
 | File | Contents |
 |---|---|
 | `README.md` | Problem, core concepts, quickstart (when code exists) |
+| `SUBMISSION.md` | **Grader front door**: pitch, criteria→evidence mapping, how to run |
 | `CHANGELOG.md` | All notable changes, newest first — **update on every change** |
 | `DECISIONS.md` | 16 scoping questions answered + sourced (do not contradict; update it if a decision changes) |
 | `TECH_STACK.md` | Go 1.27, sqlc + pgx, chi, Postgres — choices and rejections |
+| `system-map/` | Interactive system map (Archify): `index.html` + `preview.png` + `architecture.json` |
 | `docs/ARCHITECTURE.md` | Components, resolution/reconciliation flows, consistency contract |
-| `docs/DATA_MODEL.md` | Full Postgres schema (bitemporal, outbox, inverted index) |
+| `docs/DATA_MODEL.md` | Full Postgres schema (bitemporal, outbox, segments, traces) |
 | `docs/API.md` | HTTP contract; rule AST JSON shared by API/form-builder/resolver |
 | `docs/UX_FLOWS.md` | Admin flows: builder, save-gate diff, readiness checklist, explain inspector |
 | `docs/SCALE_NOTES.md` | Applicable 100k+ patterns: pooling, bulkheads, CDC-vs-outbox, Go 1.27 notes |
 | `docs/TRADEOFFS.md` | Pros/cons of every major choice, scope limitations, non-goals |
 | `docs/PROTOTYPE_PLAN.md` | Build order (Phases 0–6) with checkboxes |
+| `docs/EMAIL_DRAFT.md` | Ready-to-send submission email |
 
 ## Governing invariants (violating these = bug)
 
@@ -68,5 +71,10 @@ loads typed config with fail-fast validation on invalid values.
 
 ## Current status
 
-Docs complete (Phases 0 partial). Next: scaffold Go module + migrations per
-`docs/PROTOTYPE_PLAN.md` Phase 1.
+All phases complete (0–5) plus submission packaging: seeded demo company (9
+categories, 20 policies, 18 rules, 2 segments, 1,000 employees), API + worker
++ server + seed binaries, interactive system map, public repo.
+Scoped-out / pending: CI workflow (needs a `workflow`-scoped token —
+`gh auth refresh -h github.com -s workflow`, then commit
+`.github/workflows/ci.yml`), docker image build unverified on the dev network
+(every binary locally built and live-tested instead).
