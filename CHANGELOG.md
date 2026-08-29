@@ -4,6 +4,22 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/); entries are grouped by session/date,
 newest first.
 
+## [Unreleased] — 2026-08-28 (Session 12 — interactive system map)
+
+### Added
+- **Interactive system map** rendered with [Archify](https://github.com/tt-a1i/archify)
+  (installed from source): `system-map/architecture.json` → self-contained
+  `system-map/index.html` (interactive SVG, dark/light, guided views:
+  decision path · change propagation · explain/audit, story cards).
+- **Showcase-validated 9/9** (zero composition errors/warnings) after
+  focused corridor repair rounds per the skill protocol.
+- **README + SUBMISSION embed a rendered preview** (`system-map/preview.png`,
+  captured via Playwright's cached headless Chromium) plus a link to the
+  interactive file; SUBMISSION gains a map section at the top.
+- Note: repo push has been intermittently blocked by the local network
+  (GitHub unreachable in bursts across sessions); commits are pushed when
+  the connection allows — see git status for parity.
+
 ## [Unreleased] — 2026-08-28 (Session 11 — submission packaging)
 
 ### Added

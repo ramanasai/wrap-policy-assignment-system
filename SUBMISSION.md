@@ -13,8 +13,10 @@ Start here. Everything else in the repo supports this page.
 **Open the clickable map of the whole system**
 (guided views: decision path · change propagation · explain/audit):
 
-→ **`system-map/index.html`** — or live at the Pages URL once enabled
-(the source is `system-map/architecture.json`, rendered with Archify).
+→ **`system-map/index.html`** — live preview below; source is
+`system-map/architecture.json` (rendered with Archify).
+
+![System map preview](system-map/preview.png)
 
 ## The pitch (one paragraph)
 

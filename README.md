@@ -92,6 +92,15 @@ Nothing is patched; everything is recomputed.
 - **Inverted attribute index** means a rule or attribute change recomputes only the affected
   diff (employees entering/leaving each rule's scope), not the whole company.
 
+## Interactive system map
+
+![Policy Assignment System — system map](system-map/preview.png)
+
+Clickable, guided version (decision path · change propagation · explain/audit,
+dark/light themes): **[open the interactive map](system-map/index.html)**.
+Rendered from [`system-map/architecture.json`](system-map/architecture.json)
+with [Archify](https://github.com/tt-a1i/archify).
+
 ## Quickstart
 
 ```bash
