@@ -86,6 +86,6 @@ decision-trace demo as the single highest-signal artifact.
 
 ## Phase 6 — Submission polish
 
-- [ ] Final pass over all docs; cross-link every claim to code or trace output
+- [x] Final pass over all docs; cross-link every claim to code or trace output
 - [ ] `AGENTS.md` accuracy check (commands actually work)
-- [ ] Email-ready summary: doc map + demo highlights + tradeoffs pointer
+- [x] Email-ready summary (docs/EMAIL_DRAFT.md) + SUBMISSION.md front door

@@ -4,6 +4,28 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/); entries are grouped by session/date,
 newest first.
 
+## [Unreleased] — 2026-08-28 (Session 11 — submission packaging)
+
+### Added
+- **`SUBMISSION.md`** — the grader's front door: pitch, how to run, every
+  evaluation criterion mapped to where it's satisfied + evidence, doc map,
+  demo summary, honest limitations.
+- **`docs/EMAIL_DRAFT.md`** — ready-to-send email (To: eng@warp.co).
+- **MIT LICENSE**; README quickstart split into Docker + local paths; README
+  now points graders at SUBMISSION.md.
+- **CI workflow** (`.github/workflows/ci.yml`) prepared — vet + full suite
+  against a live Postgres 16 service container (integration tests run, not
+  skipped). NOT yet pushed: uploading workflow files requires a
+  `workflow`-scoped token (`gh auth refresh -h github.com -s workflow`);
+  the file sits untracked until then.
+- **Repository made PUBLIC** for the submission
+  (github.com/ramanasai/wrap-policy-assignment-system). Secrets audited
+  before the flip: `.env` untracked, no credentials in tracked files.
+
+### Validated
+- Markdown validator clean; full test suite green; repo clean. Submission
+  package cross-links verified.
+
 ## [Unreleased] — 2026-08-28 (Session 10)
 
 ### Added
