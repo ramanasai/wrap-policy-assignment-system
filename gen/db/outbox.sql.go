@@ -78,7 +78,7 @@ func (q *Queries) DeadLetterOutbox(ctx context.Context, id int64) error {
 	return err
 }
 
-const insertOutboxEvent = `-- name: InsertOutboxEvent :one
+const insertOutboxEvent = `-- name: InsertOutboxEvent :execrows
 
 INSERT INTO outbox (
     event_type, company_id, payload, idempotency_key
@@ -86,7 +86,7 @@ INSERT INTO outbox (
     $1::text, $2,
     $3, $4
 )
-RETURNING id, event_type, company_id, payload, event_schema_version, idempotency_key, recorded_at, processed_at, attempts, dead_lettered
+ON CONFLICT (idempotency_key) DO NOTHING
 `
 
 type InsertOutboxEventParams struct {
@@ -97,27 +97,20 @@ type InsertOutboxEventParams struct {
 }
 
 // outbox.sql — transactional outbox: claim, complete, dead-letter
-func (q *Queries) InsertOutboxEvent(ctx context.Context, arg InsertOutboxEventParams) (Outbox, error) {
-	row := q.db.QueryRow(ctx, insertOutboxEvent,
+// Idempotent by design: a retried emit (same idempotency key) is a no-op,
+// not an error — that is what makes dated scheduler keys re-runnable and
+// API retries safe (Stripe-style, docs/API.md §Idempotency).
+func (q *Queries) InsertOutboxEvent(ctx context.Context, arg InsertOutboxEventParams) (int64, error) {
+	result, err := q.db.Exec(ctx, insertOutboxEvent,
 		arg.EventType,
 		arg.CompanyID,
 		arg.Payload,
 		arg.IdempotencyKey,
 	)
-	var i Outbox
-	err := row.Scan(
-		&i.ID,
-		&i.EventType,
-		&i.CompanyID,
-		&i.Payload,
-		&i.EventSchemaVersion,
-		&i.IdempotencyKey,
-		&i.RecordedAt,
-		&i.ProcessedAt,
-		&i.Attempts,
-		&i.DeadLettered,
-	)
-	return i, err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const markOutboxProcessed = `-- name: MarkOutboxProcessed :exec

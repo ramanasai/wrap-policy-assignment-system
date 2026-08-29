@@ -4,6 +4,55 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/); entries are grouped by session/date,
 newest first.
 
+## [Unreleased] — 2026-08-28 (Session 7)
+
+### Added
+- **Reconciler worker (`internal/reconciler`, `cmd/worker`)** — Phase 4:
+  - Outbox batch claiming (`FOR UPDATE SKIP LOCKED`) with retry + dead-letter
+    at MaxAttempts; LISTEN/NOTIFY bridge on a dedicated connection (session
+    affinity per SCALE_NOTES) + poll safety net; drains on startup/NOTIFY/tick.
+  - Fact-change fan-in (one employee, all categories) and rule-change fan-out
+    (whole category) reconciliation; every decision materializes the
+    projection AND persists a trace via one shared helper (invariant #6).
+  - **Sweeper** — expected-vs-actual drift backstop over the entire population:
+    resolves truth per employee, compares to the projection, repairs drift
+    (from truth, same auditable helper), returns counts + drift rows.
+  - **Scheduler** — future-dated transitions that became effective today
+    (facts + rule versions starting today) emit reconciliation events with
+    DATED idempotency keys; same-day re-runs are no-ops.
+  - Migration 0002: `notify_new_outbox()` trigger + trailer; sqlc schema now
+    reads both migrations; projection/scheduler queries added.
+- **Outbox insert made idempotent** — `ON CONFLICT (idempotency_key) DO
+  NOTHING`; `EmitEvent` returns rows-affected so duplicates are no-ops, not
+  errors (correct contract for API retries and dated scheduler keys).
+- **Config**: `RECONCILER_POLL_INTERVAL`, `SCHEDULER_INTERVAL` (validated,
+  defaulted, documented in .env.example); reconciler config accessors.
+- **Tests (live Postgres)**: outbox→projection end-to-end, rule-change
+  recompute, drift injection→sweeper repair, scheduler idempotency.
+
+### Fixed
+- **Sweeper didn't persist traces (live smoke-test catch)** — sweep repairs
+  made decisions invisible to explain. Extracted
+  `materializeAndTrace` shared by reconciler + sweeper: every decision now
+  leaves an auditable trace, event-driven or swept.
+- Reconcile test bug: relocation test emitted the event but never changed the
+  fact; now the relocation is committed before the event fires.
+- Worker boot: config fields the binary needed were missing; added and
+  validated.
+
+### Validated
+- **Full-stack live run against the seeded 1,000-employee company**: worker
+  started, LISTEN established, startup sweep materialized the projection
+  (5,411 assignments) and persisted 6,000 decision traces (1,000 employees ×
+  6 categories), queued outbox events processed to empty, drift repaired
+  from truth. Kill-recovery verified (FOR UPDATE SKIP LOCKED).
+- All 7 packages green (`ok` on api, config, logging, reconciler, repo,
+  utils, resolver); gofmt/vet clean; markdown validator clean.
+
+### Changed
+- `.env.example` + `.env` gain `RECONCILER_POLL_INTERVAL` and
+  `SCHEDULER_INTERVAL`.
+
 ## [Unreleased] — 2026-08-28 (Session 6)
 
 ### Added

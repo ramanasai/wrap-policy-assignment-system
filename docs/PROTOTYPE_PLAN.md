@@ -59,13 +59,17 @@ decision-trace demo as the single highest-signal artifact.
 
 ## Phase 4 — Reconciliation + scheduler (internal/)
 
-- [ ] LISTEN/NOTIFY bridge → reconciler claims outbox (`FOR UPDATE SKIP LOCKED`)
-- [ ] Inverted-index affected-set computation (entering/leaving diff)
-- [ ] Materialized projection update + shadowed-match promotion on rule deletion
-- [ ] Scheduler worker: future-dated fact/rule transitions fire on their effective date
-- [ ] Sweeper: expected-vs-actual periodic reconciliation (drift backstop)
-- [ ] Tests: `reconciliation_test.go` — attribute change → correct diff; event loss →
-      sweeper converges
+- [x] LISTEN/NOTIFY bridge (trigger + dedicated connection) → reconciler claims
+      outbox (`FOR UPDATE SKIP LOCKED`)
+- [x] Affected-set recompute: per-employee fan-in (fact/employee changes) and
+      per-category fan-out (rule changes)
+- [x] Materialized projection update + shadowed-match replacement per resolution
+- [x] Scheduler worker: future-dated fact/rule transitions fire on their
+      effective date with dated idempotency keys (re-runs are no-ops)
+- [x] Sweeper: expected-vs-actual drift backstop, chunked, repairs from truth
+      via the same materialize+trace helper (decisions stay auditable)
+- [x] Tests: `reconciliation_test.go` — outbox→projection, rule-change recompute,
+      drift injection→sweep repair, scheduler idempotency (live Postgres)
 
 ## Phase 5 — The demo (the graded artifact)
 

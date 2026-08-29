@@ -1,13 +1,16 @@
 -- outbox.sql — transactional outbox: claim, complete, dead-letter
 
--- name: InsertOutboxEvent :one
+-- name: InsertOutboxEvent :execrows
+-- Idempotent by design: a retried emit (same idempotency key) is a no-op,
+-- not an error — that is what makes dated scheduler keys re-runnable and
+-- API retries safe (Stripe-style, docs/API.md §Idempotency).
 INSERT INTO outbox (
     event_type, company_id, payload, idempotency_key
 ) VALUES (
     sqlc.arg('event_type')::text, sqlc.arg('company_id'),
     sqlc.arg('payload'), sqlc.arg('idempotency_key')
 )
-RETURNING *;
+ON CONFLICT (idempotency_key) DO NOTHING;
 
 -- name: ClaimOutboxBatch :many
 -- FOR UPDATE SKIP LOCKED is the Postgres-as-queue pattern: concurrent

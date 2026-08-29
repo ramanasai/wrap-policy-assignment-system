@@ -22,6 +22,12 @@ func TestLoad_Defaults(t *testing.T) {
 	if cfg.ReconcilerBatchSize != DefaultReconcilerBatch {
 		t.Errorf("ReconcilerBatchSize = %d, want %d", cfg.ReconcilerBatchSize, DefaultReconcilerBatch)
 	}
+	if cfg.ReconcilerPoll != DefaultReconcilerPoll {
+		t.Errorf("ReconcilerPoll = %v, want %v", cfg.ReconcilerPoll, DefaultReconcilerPoll)
+	}
+	if cfg.SchedulerInterval != DefaultSchedulerInterval {
+		t.Errorf("SchedulerInterval = %v, want %v", cfg.SchedulerInterval, DefaultSchedulerInterval)
+	}
 	if cfg.SweeperInterval != DefaultSweeperInterval {
 		t.Errorf("SweeperInterval = %v, want %v", cfg.SweeperInterval, DefaultSweeperInterval)
 	}
@@ -38,6 +44,8 @@ func TestLoad_ValidOverrides(t *testing.T) {
 	t.Setenv("LOG_FORMAT", "console")
 	t.Setenv(EnvReconcilerBatch, "1000")
 	t.Setenv(EnvSweeperInterval, "1h")
+	t.Setenv(EnvReconcilerPoll, "100ms")
+	t.Setenv(EnvSchedulerInterval, "24h")
 	t.Setenv(EnvResolverCache, "50000")
 
 	cfg, err := Load()
@@ -53,7 +61,9 @@ func TestLoad_ValidOverrides(t *testing.T) {
 	if cfg.Log.Level != "warn" || cfg.Log.Format != "console" {
 		t.Errorf("Log = %+v", cfg.Log)
 	}
-	if cfg.ReconcilerBatchSize != 1000 || cfg.SweeperInterval != time.Hour || cfg.ResolverCacheSize != 50000 {
+	if cfg.ReconcilerBatchSize != 1000 || cfg.SweeperInterval != time.Hour ||
+		cfg.ReconcilerPoll != 100*time.Millisecond || cfg.SchedulerInterval != 24*time.Hour ||
+		cfg.ResolverCacheSize != 50000 {
 		t.Errorf("worker config wrong: %+v", cfg)
 	}
 }

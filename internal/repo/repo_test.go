@@ -220,12 +220,13 @@ func TestOutbox_ClaimLifecycle(t *testing.T) {
 	s := testStore(t)
 	ctx := context.Background()
 
-	// Idempotency: same key twice → second insert fails.
-	if _, err := s.EmitEvent(ctx, "fact_changed", "co_test", map[string]any{"k": 1}, "idem-lifecycle-1"); err != nil {
-		t.Fatalf("EmitEvent: %v", err)
+	// Idempotency: same key twice → second emit is a NO-OP (0 rows), not an
+	// error — safe retries and re-runable dated scheduler keys.
+	if n, err := s.EmitEvent(ctx, "fact_changed", "co_test", map[string]any{"k": 1}, "idem-lifecycle-1"); err != nil || n != 1 {
+		t.Fatalf("EmitEvent first = (%d, %v), want (1, nil)", n, err)
 	}
-	if _, err := s.EmitEvent(ctx, "fact_changed", "co_test", map[string]any{"k": 1}, "idem-lifecycle-1"); err == nil {
-		t.Fatal("duplicate idempotency key must be rejected by the unique constraint")
+	if n, err := s.EmitEvent(ctx, "fact_changed", "co_test", map[string]any{"k": 1}, "idem-lifecycle-1"); err != nil || n != 0 {
+		t.Fatalf("EmitEvent duplicate = (%d, %v), want (0, nil) no-op", n, err)
 	}
 
 	claimed, err := s.ClaimOutboxBatch(ctx, 500)

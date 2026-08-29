@@ -1,9 +1,10 @@
 version: "2"
 sql:
   - engine: "postgresql"
-    # The migration file is the single source of truth for schema shape.
-    # (sqlc parses CREATE TABLE/INDEX; BEGIN/COMMIT are tolerated.)
-    schema: "db/migrations/0001_init.up.sql"
+    # Migration files are the single source of truth for schema shape.
+    schema:
+      - "db/migrations/0001_init.up.sql"
+      - "db/migrations/0002_reconciler.up.sql"
     queries: "db/queries"
     gen:
       go:

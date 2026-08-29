@@ -12,21 +12,23 @@ import (
 // EmitEvent writes a transactional outbox row. Callers invoke this INSIDE
 // the same transaction as their input change (or via WithTx variants in the
 // workers) — that is what makes the outbox transactional (ARCHITECTURE §4).
-func (s *Store) EmitEvent(ctx context.Context, eventType, companyID string, payload map[string]any, idempotencyKey string) (db.Outbox, error) {
+// Returns rowsAffected: 1 = newly queued, 0 = duplicate idempotency key
+// (no-op — retries and re-runs are safe by design).
+func (s *Store) EmitEvent(ctx context.Context, eventType, companyID string, payload map[string]any, idempotencyKey string) (int64, error) {
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return db.Outbox{}, fmt.Errorf("repo: emit event: payload: %w", err)
+		return 0, fmt.Errorf("repo: emit event: payload: %w", err)
 	}
-	row, err := s.Q.InsertOutboxEvent(ctx, db.InsertOutboxEventParams{
+	rows, err := s.Q.InsertOutboxEvent(ctx, db.InsertOutboxEventParams{
 		EventType:      eventType,
 		CompanyID:      companyID,
 		Payload:        payloadJSON,
 		IdempotencyKey: idempotencyKey,
 	})
 	if err != nil {
-		return db.Outbox{}, fmt.Errorf("repo: emit event %s: %w", idempotencyKey, err)
+		return 0, fmt.Errorf("repo: emit event %s: %w", idempotencyKey, err)
 	}
-	return row, nil
+	return rows, nil
 }
 
 // ClaimOutboxBatch claims the next unprocessed batch with FOR UPDATE SKIP

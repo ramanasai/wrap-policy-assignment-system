@@ -32,6 +32,8 @@ const (
 	EnvSweeperInterval = "SWEEPER_INTERVAL"
 	EnvResolverCache   = "RESOLVER_CACHE_SIZE"
 	EnvSeedEmployees   = "SEED_EMPLOYEES"
+	EnvReconcilerPoll = "RECONCILER_POLL_INTERVAL"
+	EnvSchedulerInterval = "SCHEDULER_INTERVAL"
 )
 
 // Config is the fully-typed runtime configuration.
@@ -44,7 +46,9 @@ type Config struct {
 	Log LogConfig
 
 	ReconcilerBatchSize int
+	ReconcilerPoll      time.Duration
 	SweeperInterval     time.Duration
+	SchedulerInterval   time.Duration
 	ResolverCacheSize   int
 	SeedEmployees       int
 }
@@ -66,6 +70,8 @@ const (
 	DefaultSweeperInterval = 15 * time.Minute
 	DefaultResolverCache   = 10_000
 	DefaultSeedEmployees   = 1000
+	DefaultReconcilerPoll = 5 * time.Second
+	DefaultSchedulerInterval = time.Hour
 )
 
 // Load reads and validates configuration from the environment.
@@ -95,6 +101,12 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 	if cfg.SweeperInterval, err = utils.GetDuration(EnvSweeperInterval, DefaultSweeperInterval); err != nil {
+		return Config{}, err
+	}
+	if cfg.ReconcilerPoll, err = utils.GetDuration(EnvReconcilerPoll, DefaultReconcilerPoll); err != nil {
+		return Config{}, err
+	}
+	if cfg.SchedulerInterval, err = utils.GetDuration(EnvSchedulerInterval, DefaultSchedulerInterval); err != nil {
 		return Config{}, err
 	}
 
@@ -142,6 +154,12 @@ func (c Config) validate() error {
 	if c.SweeperInterval <= 0 {
 		return fmt.Errorf("%s: must be positive, got %s", EnvSweeperInterval, c.SweeperInterval)
 	}
+	if c.ReconcilerPoll < time.Millisecond {
+		return fmt.Errorf("%s: must be >= 1ms, got %s", EnvReconcilerPoll, c.ReconcilerPoll)
+	}
+	if c.SchedulerInterval <= 0 {
+		return fmt.Errorf("%s: must be positive, got %s", EnvSchedulerInterval, c.SchedulerInterval)
+	}
 	if c.ResolverCacheSize < 0 {
 		return fmt.Errorf("%s: must be >= 0, got %d", EnvResolverCache, c.ResolverCacheSize)
 	}
@@ -168,7 +186,9 @@ func defaultsOnly() Config {
 		DatabaseURL:         DefaultDatabaseURL,
 		Log:                 LogConfig{Level: DefaultLogLevel, Format: DefaultLogFormat},
 		ReconcilerBatchSize: DefaultReconcilerBatch,
+		ReconcilerPoll:      DefaultReconcilerPoll,
 		SweeperInterval:     DefaultSweeperInterval,
+		SchedulerInterval:   DefaultSchedulerInterval,
 		ResolverCacheSize:   DefaultResolverCache,
 		SeedEmployees:       DefaultSeedEmployees,
 	}
