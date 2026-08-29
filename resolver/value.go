@@ -183,6 +183,24 @@ func evalClause(c Clause, raw interface{}) (bool, error) {
 		return !found, nil
 	}
 
+	// contains: the FACT value is a list; the predicate value is a scalar.
+	if c.Op == OpContains {
+		list, ok := raw.([]any)
+		if !ok {
+			return false, fmt.Errorf("fact value for contains is not a list: %v", raw)
+		}
+		for _, item := range list {
+			eq, err := equalNormalized(item, c.Value)
+			if err != nil {
+				return false, err
+			}
+			if eq {
+				return true, nil
+			}
+		}
+		return false, nil
+	}
+
 	ln := normalizeComparable(raw)
 	if ln.kind == kindErr {
 		return false, fmt.Errorf("cannot normalize fact value %v", raw)

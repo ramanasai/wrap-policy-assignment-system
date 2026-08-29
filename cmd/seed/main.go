@@ -84,6 +84,16 @@ func seedPoliciesAndRules(ctx context.Context, store *repo.Store, logger zerolog
 		{"pol_train_harassment", "compliance_training", "Manager Harassment Training"},
 		{"pol_train_security", "compliance_training", "Security Awareness Training"},
 		{"pol_benefits_401k", "benefits_plan", "401k Match"},
+		// Manager: the category assigns REPORTING STRUCTURE policies — the
+		// org-chart based example from the problem statement.
+		{"pol_mgr_jordan", "manager", "Reports to Jordan Lee (Head of Eng)"},
+		{"pol_mgr_dana", "manager", "Reports to Dana Wu (VP People)"},
+		// Work schedules / shift policies / holiday calendars (problem examples).
+		{"pol_ws_standard", "work_schedule", "Standard Mon-Fri 9-6"},
+		{"pol_ws_night", "work_schedule", "Night Shift"},
+		{"pol_shift_hourly_us", "shift_policy", "US Hourly Overtime & Clock-In Rules"},
+		{"pol_hol_us", "holiday_calendar", "US Federal Holiday Calendar"},
+		{"pol_hol_ca", "holiday_calendar", "California Holiday Calendar"},
 	}
 	for _, p := range policies {
 		if err := store.AddPolicy(ctx, p.id, p.cat, p.name); err != nil {
@@ -117,11 +127,26 @@ func seedPoliciesAndRules(ctx context.Context, store *repo.Store, logger zerolog
 		// Contractor shift policy — attribute-based (problem statement example).
 		{"r_pay_contractor", "pay_schedule", "pol_pay_monthly", 10, 4,
 			`{"op":"and","clauses":[{"attr":"employment_type","op":"eq","value":"contractor"}]}`, "2024-01-01", resolver.SourceAuthored},
-		// Manager: two competing rules → explicit_user_choice readiness decision.
-		{"r_mgr_eng", "manager", "pol_train_harassment", 5, 4,
+		// Manager: Engineering managers report to Jordan; CA managers to Dana.
+		// A CA *Engineering* manager matches both → explicit_user_choice needs
+		// a readiness decision (the two-options demo from UX_FLOWS §3).
+		{"r_mgr_eng", "manager", "pol_mgr_jordan", 5, 4,
 			`{"op":"and","clauses":[{"attr":"department","op":"eq","value":"Engineering"},{"attr":"is_manager","op":"eq","value":true}]}`, "2024-01-01", resolver.SourceAuthored},
-		{"r_mgr_ca", "manager", "pol_train_harassment", 0, 4,
+		{"r_mgr_ca", "manager", "pol_mgr_dana", 0, 4,
 			`{"op":"and","clauses":[{"attr":"location","op":"eq","value":"US-CA"},{"attr":"is_manager","op":"eq","value":true}]}`, "2024-01-01", resolver.SourceAuthored},
+		// Work schedule + shift policy + holiday calendar (problem examples).
+		{"r_ws_night", "work_schedule", "pol_ws_night", 5, 4,
+			`{"op":"and","clauses":[{"attr":"department","op":"eq","value":"Engineering"}]}`, "2024-01-01", resolver.SourceAuthored},
+		{"r_shift_hourly_us", "shift_policy", "pol_shift_hourly_us", 5, 4,
+			`{"op":"and","clauses":[{"attr":"employment_type","op":"eq","value":"hourly"},{"attr":"location","op":"in","value":["US-CA","US-NY","US-WA"]}]}`, "2024-01-01", resolver.SourceAuthored},
+		{"r_hol_us", "holiday_calendar", "pol_hol_us", 5, 2,
+			`{"op":"and","clauses":[{"attr":"location","op":"in","value":["US-CA","US-NY","US-WA"]}]}`, "2024-01-01", resolver.SourceAuthored},
+		{"r_hol_ca", "holiday_calendar", "pol_hol_ca", 5, 3,
+			`{"op":"and","clauses":[{"attr":"location","op":"eq","value":"US-CA"}]}`, "2024-01-01", resolver.SourceAuthored},
+		// Supergroup-based (problem statement: "group's membership changes"):
+		// field_ops members get the security training even before tenure.
+		{"r_train_field_ops", "compliance_training", "pol_train_security", 0, 3,
+			`{"op":"and","clauses":[{"attr":"segments","op":"contains","value":"field_ops"}]}`, "2024-01-01", resolver.SourceAuthored},
 		// App access: additive — engineers get Figma + GitHub; everyone gets Slack.
 		{"r_app_slack", "app_access", "pol_app_slack", 0, 1,
 			`{"op":"and","clauses":[{"attr":"employment_type","op":"ne","value":"intern"}]}`, "2024-01-01", resolver.SourceAuthored},
@@ -146,7 +171,20 @@ func seedPoliciesAndRules(ctx context.Context, store *repo.Store, logger zerolog
 			return fmt.Errorf("rule %s: %w", r.id, err)
 		}
 	}
-	logger.Info().Int("policies", len(policies)).Int("rules", len(rules)).Msg("policies and rules seeded")
+	// Segments (Supergroups): named, reusable predicates. Membership is
+	// derived (rebuilt by the worker from these predicates — never edited).
+	segments := []struct{ id, name, predicate string }{
+		{"field_ops", "Field Operations Cohort",
+			`{"op":"and","clauses":[{"attr":"location","op":"eq","value":"US-NY"}]}`},
+		{"engineering_leads", "Engineering Leads",
+			`{"op":"and","clauses":[{"attr":"department","op":"eq","value":"Engineering"},{"attr":"is_manager","op":"eq","value":true}]}`},
+	}
+	for _, seg := range segments {
+		if err := store.CreateSegment(ctx, seg.id, "co_demo", seg.name, []byte(seg.predicate)); err != nil {
+			return fmt.Errorf("segment %s: %w", seg.id, err)
+		}
+	}
+	logger.Info().Int("policies", len(policies)).Int("rules", len(rules)).Int("segments", len(segments)).Msg("policies, rules and segments seeded")
 	return nil
 }
 
@@ -155,7 +193,7 @@ func seedEmployees(ctx context.Context, store *repo.Store, logger zerologLogger,
 	rng := rand.New(rand.NewSource(42)) // deterministic demo data
 	locations := []string{"US-CA", "US-NY", "US-WA"}
 	departments := []string{"Engineering", "Sales", "HR"}
-	empTypes := []string{"full_time", "full_time", "full_time", "contractor"} // 75% full-time
+	empTypes := []string{"full_time", "full_time", "full_time", "contractor", "hourly"} // 60/20/20
 	levels := []string{"IC1", "IC2", "IC3", "M1", "M2"}
 	asOf := time.Now().UTC().Format("2006-01-02")
 

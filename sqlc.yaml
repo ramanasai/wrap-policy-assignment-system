@@ -5,6 +5,8 @@ sql:
     schema:
       - "db/migrations/0001_init.up.sql"
       - "db/migrations/0002_reconciler.up.sql"
+      - "db/migrations/0003_extended_categories.up.sql"
+      - "db/migrations/0004_segments.up.sql"
     queries: "db/queries"
     gen:
       go:

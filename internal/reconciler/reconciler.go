@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	db "github.com/ramanasai/wrap-policy-assignment-system/gen/db"
 	"github.com/rs/zerolog"
 
 	"github.com/ramanasai/wrap-policy-assignment-system/internal/repo"
@@ -100,9 +101,19 @@ func (r *Reconciler) processEvent(ctx context.Context, id int64, eventType strin
 			return fmt.Errorf("decode payload: %w", err)
 		}
 		return r.ReconcileRuleChange(ctx, p.CategoryID, &id)
+	case "segment_changed":
+		var p segmentChangedPayload
+		if err := json.Unmarshal(payload, &p); err != nil {
+			return fmt.Errorf("decode payload: %w", err)
+		}
+		return r.ReconcileSegmentChange(ctx, p.SegmentID, &id)
 	default:
 		return fmt.Errorf("unknown event type %q", eventType)
 	}
+}
+
+type segmentChangedPayload struct {
+	SegmentID string `json:"segment_id"`
 }
 
 type factChangedPayload struct {
@@ -112,6 +123,73 @@ type factChangedPayload struct {
 
 type ruleChangedPayload struct {
 	CategoryID string `json:"category_id"`
+}
+
+// ReconcileSegmentChange rebuilds a segment's membership from its predicate
+// and re-reconciles every employee whose membership CHANGED — group
+// membership changes flow through the exact same machinery as fact changes.
+func (r *Reconciler) ReconcileSegmentChange(ctx context.Context, segmentID string, triggerEventID *int64) error {
+	segments, err := r.store.ListSegments(ctx)
+	if err != nil {
+		return fmt.Errorf("reconcile segment: list: %w", err)
+	}
+	seg := (*db.Segment)(nil)
+	for i := range segments {
+		if segments[i].ID == segmentID {
+			seg = &segments[i]
+		}
+	}
+	if seg == nil {
+		return fmt.Errorf("reconcile segment: %s not found", segmentID)
+	}
+
+	newMembers, err := r.store.RecomputeSegmentMembers(ctx, *seg)
+	if err != nil {
+		return fmt.Errorf("reconcile segment: recompute: %w", err)
+	}
+
+	// Diff against current membership → the affected set (entering/leaving).
+	current, err := r.store.Q.GetSegmentMembers(ctx, segmentID)
+	if err != nil {
+		return fmt.Errorf("reconcile segment: read current: %w", err)
+	}
+	had := map[string]bool{}
+	for _, id := range current {
+		had[id] = true
+	}
+	changed := map[string]bool{}
+	for _, id := range newMembers {
+		if !had[id] {
+			changed[id] = true
+		}
+	}
+	for _, id := range current {
+		if !hadCurrent(newMembers, id) {
+			changed[id] = true
+		}
+	}
+
+	if err := r.store.SetSegmentMembers(ctx, segmentID, newMembers); err != nil {
+		return fmt.Errorf("reconcile segment: persist membership: %w", err)
+	}
+
+	// Re-reconcile only the changed employees (affected-set, not population).
+	for empID := range changed {
+		if err := r.ReconcileEmployee(ctx, empID, triggerEventID); err != nil {
+			return fmt.Errorf("reconcile segment %s: member %s: %w", segmentID, empID, err)
+		}
+	}
+	r.log.Info().Str("segment", segmentID).Int("members", len(newMembers)).Int("changed", len(changed)).Msg("segment membership rebuilt")
+	return nil
+}
+
+func hadCurrent(members []string, id string) bool {
+	for _, m := range members {
+		if m == id {
+			return true
+		}
+	}
+	return false
 }
 
 // ReconcileEmployee re-resolves every category for one employee and

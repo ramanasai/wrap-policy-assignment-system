@@ -4,6 +4,43 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/); entries are grouped by session/date,
 newest first.
 
+## [Unreleased] — 2026-08-28 (Session 8)
+
+### Added
+- **Segments (Supergroups) close the last requirement gap** — "group's
+  membership changes" from the problem statement is now first-class:
+  - `segment` + `segment_membership` tables (migration 0004); membership is
+    DERIVED from stored predicates, never hand-edited.
+  - `contains` clause operator in the resolver (list-valued facts — the
+    derived `segments` attribute), with tests incl. miss-reason coverage.
+  - Reconciler `segment_changed` handler: recompute membership → diff
+    affected employees → reconcile exactly those (enter/leave).
+  - Sweeper now also re-derives segment membership as a drift backstop
+    (segments converged after a missed event; caught by live run).
+  - Seeded segments: `field_ops` (NY), `engineering_leads`; rule
+    `r_train_field_ops` assigns security training via `segments contains`.
+- **Three missing problem-statement categories** (migration 0003):
+  `work_schedule`, `shift_policy`, `holiday_calendar` with policies + rules
+  (incl. the "Hourly US W-2 shift tracking" example; employment_type gains
+  `hourly`; seed distribution now 60/20/20 full/contract/hourly).
+- **Manager seed fixed (was assigning a training policy)**: manager category
+  now resolves REPORTING STRUCTURE — Engineering managers → Jordan Lee,
+  CA managers → Dana Wu; a CA *Engineering* manager surfaces the
+  explicit_user_choice decision (two options, UX_FLOWS §3).
+- testdb statement splitter rewritten as a single-pass state machine
+  (single-quotes, dollar-quoted PL/pgSQL bodies, inline comments,
+  BEGIN/COMMIT dropped); migrations now applied by glob — new files flow.
+
+### Validated (live, seeded 1,000-employee company)
+- Hourly WA engineer: shift_policy → US Hourly Overtime; work_schedule →
+  Night Shift (dept); holiday → US Federal; app_access additive. NY
+  employee: Security Training via field_ops segment. True CA employee:
+  California Holiday Calendar (specificity 3 > 2). Segments rebuilt:
+  field_ops 319, engineering_leads 29. All 7 packages green.
+
+### Changed
+- sqlc.yaml schema list includes 0003/0004.
+
 ## [Unreleased] — 2026-08-28 (Session 7)
 
 ### Added

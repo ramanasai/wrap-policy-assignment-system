@@ -125,6 +125,19 @@ type RuleVersion struct {
 	RecordedAt pgtype.Timestamptz        `json:"recorded_at"`
 }
 
+type Segment struct {
+	ID        string             `json:"id"`
+	CompanyID string             `json:"company_id"`
+	Name      string             `json:"name"`
+	Predicate []byte             `json:"predicate"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type SegmentMembership struct {
+	SegmentID  string `json:"segment_id"`
+	EmployeeID string `json:"employee_id"`
+}
+
 type ShadowedMatch struct {
 	EmployeeID string                    `json:"employee_id"`
 	CategoryID string                    `json:"category_id"`

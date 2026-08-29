@@ -105,6 +105,37 @@ WHERE employee_id = :id
 ORDER BY attribute_key, valid_range DESC;
 ```
 
+### `segment` / `segment_membership` — Supergroups (derived groups)
+
+```sql
+CREATE TABLE segment (
+    id          TEXT PRIMARY KEY,
+    company_id  TEXT NOT NULL,
+    name        TEXT NOT NULL,
+    predicate   JSONB NOT NULL,          -- canonical rule AST (same as rule predicates)
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE segment_membership (
+    segment_id  TEXT NOT NULL,
+    employee_id TEXT NOT NULL,
+    PRIMARY KEY (segment_id, employee_id)
+);
+```
+
+Groups are **named, reusable rule predicates** whose membership is derived
+state — rebuilt by the worker from the predicate, never hand-edited. Rules
+match membership via the derived `segments` attribute + the `contains`
+operator:
+
+```jsonc
+{ "attr": "segments", "op": "contains", "value": "field_ops" }
+```
+
+A segment change is an event like any other: rebuild membership → diff the
+affected employees → reconcile exactly those. The sweeper re-derives
+membership as a drift backstop so a missed event still converges.
+
 ### `attribute_definition` — the custom-attribute escape hatch
 
 ```sql

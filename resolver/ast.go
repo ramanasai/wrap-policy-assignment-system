@@ -19,19 +19,21 @@ const OpAnd GroupOp = "and"
 type ClauseOp string
 
 const (
-	OpEq    ClauseOp = "eq"
-	OpNe    ClauseOp = "ne"
-	OpIn    ClauseOp = "in"
-	OpNotIn ClauseOp = "not_in"
-	OpGTE   ClauseOp = "gte"
-	OpGT    ClauseOp = "gt"
-	OpLTE   ClauseOp = "lte"
-	OpLT    ClauseOp = "lt"
+	OpEq       ClauseOp = "eq"
+	OpNe       ClauseOp = "ne"
+	OpIn       ClauseOp = "in"
+	OpNotIn    ClauseOp = "not_in"
+	OpGTE      ClauseOp = "gte"
+	OpGT       ClauseOp = "gt"
+	OpLTE      ClauseOp = "lte"
+	OpLT       ClauseOp = "lt"
+	OpContains ClauseOp = "contains" // fact value is a LIST containing the scalar predicate value
 )
 
 var allClauseOps = map[ClauseOp]bool{
 	OpEq: true, OpNe: true, OpIn: true, OpNotIn: true,
 	OpGTE: true, OpGT: true, OpLTE: true, OpLT: true,
+	OpContains: true,
 }
 
 // Predicate is the canonical rule AST: an AND group of clauses.

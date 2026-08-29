@@ -110,6 +110,9 @@ Returns the **stored** decision trace (immutable, written at decision time):
 Full attribute map in, derived checklist out — powers the onboarding flow:
 
 ```jsonc
+// `contains` matches list-valued facts (segment memberships):
+//   { "attr": "segments", "op": "contains", "value": "field_ops" }
+
 // Request: attribute map only (employee doesn't exist yet)
 // Response:
 { "auto_applied":    [ { "category_id": "vacation", "policy_id": "pol_ca_enhanced", "via": "rule_42" } ],

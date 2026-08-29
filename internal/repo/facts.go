@@ -65,11 +65,17 @@ func (s *Store) FactsAt(ctx context.Context, employeeID, date string) (resolver.
 		}
 		attrs[r.AttributeKey] = v
 	}
-	return resolver.Facts{
+	facts := resolver.Facts{
 		EmployeeID: employeeID,
 		AsOf:       date,
 		Attributes: attrs,
-	}, nil
+	}
+	// Supergroup memberships arrive as the derived "segments" list attribute
+	// (segments themselves are derived; they cannot be written by AddFact).
+	if err := s.injectSegments(ctx, &facts); err != nil {
+		return resolver.Facts{}, err
+	}
+	return facts, nil
 }
 
 // AddFact appends a fact event starting at validFrom and closes the previous

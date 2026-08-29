@@ -253,6 +253,41 @@ func TestPredicateMatches_ScalarOperators(t *testing.T) {
 	}
 }
 
+func TestPredicateMatches_ContainsOperator(t *testing.T) {
+	facts := Facts{
+		EmployeeID: "emp_1",
+		AsOf:       "2026-03-03",
+		Attributes: map[string]any{
+			"segments": []any{"field_ops", "engineering_leads"},
+		},
+	}
+	tests := []struct {
+		name string
+		clsr string
+		want bool
+	}{
+		{name: "contains hit", clsr: `{"attr":"segments","op":"contains","value":"field_ops"}`, want: true},
+		{name: "contains miss", clsr: `{"attr":"segments","op":"contains","value":"exec_cohort"}`, want: false},
+		{name: "contains int value", clsr: `{"attr":"segments","op":"contains","value":"engineering_leads"}`, want: true},
+		{name: "contains on scalar fact is a mismatch reason, not a panic", clsr: `{"attr":"location","op":"contains","value":"US-CA"}`, want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p, err := ParsePredicate([]byte(`{"op":"and","clauses":[` + tt.clsr + `]}`))
+			if err != nil {
+				t.Fatalf("parse: %v", err)
+			}
+			got, whyNot := p.Matches(facts)
+			if got != tt.want {
+				t.Fatalf("Matches() = %v (%s), want %v", got, whyNot, tt.want)
+			}
+			if !tt.want && whyNot == "" {
+				t.Errorf("miss must carry a whyNot reason")
+			}
+		})
+	}
+}
+
 func TestPredicateMatches_MembershipOperators(t *testing.T) {
 	facts := testFacts()
 	tests := []struct {

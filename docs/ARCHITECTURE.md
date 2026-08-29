@@ -136,6 +136,10 @@ sequenceDiagram
 ```
 
 - **Transactional outbox**: the change and its event commit atomically — no dual-write bug.
+- **Supergroups (segments)**: membership is DERIVED from stored predicates;
+  a segment change rebuilds membership, diffs affected employees, and
+  reconciles exactly those — group membership changes flow through the same
+  machinery as attribute changes.
 - **Inverted index**: `attribute_value → employee_ids` (Rippling Supergroup pattern). A rule
   edit or attribute change touches only the diff — employees entering or leaving the affected
   predicate scopes — never a full-company recompute.

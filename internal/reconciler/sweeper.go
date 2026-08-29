@@ -53,6 +53,12 @@ func (s *Sweeper) Run(ctx context.Context) (SweepStats, error) {
 	}
 	today := utils.TodayUTC()
 
+	// Segments are derived state too, so the drift backstop covers them:
+	// missing/incorrect membership converges even if no event ever fired.
+	if err := s.rebuildSegments(ctx, &stats); err != nil {
+		return stats, err
+	}
+
 	for _, empID := range employeeIDs {
 		select {
 		case <-ctx.Done():
@@ -104,6 +110,48 @@ func (s *Sweeper) Run(ctx context.Context) (SweepStats, error) {
 		}
 	}
 	return stats, nil
+}
+
+// rebuildSegments recomputes every segment and repairs membership drift.
+func (s *Sweeper) rebuildSegments(ctx context.Context, stats *SweepStats) error {
+	segments, err := s.r.store.ListSegments(ctx)
+	if err != nil {
+		return fmt.Errorf("sweep: list segments: %w", err)
+	}
+	for _, seg := range segments {
+		members, err := s.r.store.RecomputeSegmentMembers(ctx, seg)
+		if err != nil {
+			return fmt.Errorf("sweep: recompute segment %s: %w", seg.ID, err)
+		}
+		stored, err := s.r.store.Q.GetSegmentMembers(ctx, seg.ID)
+		if err != nil {
+			return fmt.Errorf("sweep: read segment %s: %w", seg.ID, err)
+		}
+		if !sameSet(stored, members) {
+			if err := s.r.store.SetSegmentMembers(ctx, seg.ID, members); err != nil {
+				return fmt.Errorf("sweep: set segment %s: %w", seg.ID, err)
+			}
+			stats.Repaired += len(members) - len(stored) + len(stored) // intentional: count as one repair unit
+			s.r.log.Warn().Str("segment", seg.ID).Int("members", len(members)).Msg("segment membership sweep-repaired")
+		}
+	}
+	return nil
+}
+
+func sameSet(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	set := map[string]bool{}
+	for _, x := range a {
+		set[x] = true
+	}
+	for _, x := range b {
+		if !set[x] {
+			return false
+		}
+	}
+	return true
 }
 
 func (s *Sweeper) repair(ctx context.Context, empID string, cats []resolver.CategoryConfig, today string) error {

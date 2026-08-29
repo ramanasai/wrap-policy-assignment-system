@@ -26,7 +26,7 @@ func clauseWeight(op ClauseOp) int {
 	switch op {
 	case OpEq:
 		return 3
-	case OpIn, OpGTE, OpGT, OpLTE, OpLT:
+	case OpIn, OpGTE, OpGT, OpLTE, OpLT, OpContains:
 		return 2
 	case OpNe, OpNotIn:
 		return 1

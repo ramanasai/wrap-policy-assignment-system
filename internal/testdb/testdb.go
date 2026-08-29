@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -65,28 +67,39 @@ func URL(t *testing.T, dbName string) string {
 
 // applyMigrations runs down-then-up migrations via pgx with statement
 // splitting (comments stripped; BEGIN/COMMIT skipped in autocommit mode).
+// applyMigrations runs ALL up migrations (sorted) then ALL down migrations
+// (reverse) via pgx with statement splitting (comments stripped;
+// BEGIN/COMMIT skipped in autocommit mode). Mirrors golang-migrate: new
+// migration files flow automatically.
 func applyMigrations(url string) error {
-	down, err := os.ReadFile("../../db/migrations/0001_init.down.sql")
+	upFiles, err := filepath.Glob("../../db/migrations/*.up.sql")
 	if err != nil {
 		return err
 	}
-	up, err := os.ReadFile("../../db/migrations/0001_init.up.sql")
+	downFiles, err := filepath.Glob("../../db/migrations/*.down.sql")
 	if err != nil {
 		return err
 	}
-	for _, file := range [][]byte{down, up} {
+	sort.Strings(upFiles)
+	sort.Sort(sort.Reverse(sort.StringSlice(downFiles)))
+
+	// Wipe first (downs, newest→oldest), then apply (ups, oldest→newest).
+	for _, file := range append(downFiles, upFiles...) {
+		raw, err := os.ReadFile(file)
+		if err != nil {
+			return err
+		}
 		conn, err := pgx.Connect(context.Background(), url)
 		if err != nil {
 			return err
 		}
-		for _, stmt := range splitStatements(string(file)) {
-			if stmt == "" || stmt == "BEGIN" || stmt == "BEGIN;" ||
-				stmt == "COMMIT" || stmt == "COMMIT;" {
-				continue // autocommit mode: tx wrappers are no-ops
+		for _, stmt := range splitStatements(string(raw)) {
+			if stmt == "" {
+				continue
 			}
 			if _, err := conn.Exec(context.Background(), stmt); err != nil {
 				conn.Close(context.Background())
-				return fmt.Errorf("exec %q: %w", trunc(stmt, 60), err)
+				return fmt.Errorf("%s: exec %q: %w", filepath.Base(file), trunc(stmt, 60), err)
 			}
 		}
 		conn.Close(context.Background())
@@ -94,29 +107,102 @@ func applyMigrations(url string) error {
 	return nil
 }
 
-// splitStatements splits a migration on top-level semicolons, stripping
-// whole-line and inline comments. Safe for this schema: no "--" occurs
-// inside string literals.
+// splitStatements splits a migration on TOP-LEVEL semicolons, aware of
+// single-quoted strings and dollar-quoted blocks (PL/pgSQL bodies), and
+// strips whole-line and inline comments outside quotes. Safe for this schema
+// (no nested dollar tags; no "--" inside literals).
+// splitStatements splits a migration on TOP-LEVEL semicolons with a single
+// pass over the whole file, tracking single-quoted strings, dollar-quoted
+// blocks (PL/pgSQL bodies), and comments. BEGIN/COMMIT transactional
+// wrappers are dropped (autocommit mode). This handles 0002's CREATE
+// FUNCTION $$ bodies and inline comments in 0001.
 func splitStatements(s string) []string {
 	var out []string
-	var cur string
-	for _, line := range strings.Split(s, "\n") {
-		if idx := strings.Index(line, "--"); idx >= 0 {
-			line = line[:idx]
+	cur := strings.Builder{}
+	depth := 0 // dollar-quote nesting
+	inSingle := false
+
+	flush := func() {
+		stmt := strings.TrimSpace(cur.String())
+		if stmt != "" && stmt != "BEGIN" && stmt != "BEGIN;" &&
+			stmt != "COMMIT" && stmt != "COMMIT;" {
+			out = append(out, stmt)
 		}
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "" {
+		cur.Reset()
+	}
+
+	i := 0
+	for i < len(s) {
+		c := s[i]
+
+		// Comments: strip to end of line.
+		if !inSingle && depth == 0 && c == '-' && i+1 < len(s) && s[i+1] == '-' {
+			for i < len(s) && s[i] != '\n' {
+				i++
+			}
 			continue
 		}
-		cur += " " + line
-		if strings.HasSuffix(trimmed, ";") {
-			out = append(out, strings.TrimSpace(cur))
-			cur = ""
+		// Dollar-quote open/close ($$).
+		if !inSingle && i+1 < len(s) && s[i:i+2] == "$$" {
+			if depth == 0 {
+				depth = 1
+			} else {
+				depth = 0
+			}
+			cur.WriteString("$$")
+			i += 2
+			continue
+		}
+		// Single-quoted strings ('' = escaped quote).
+		if depth == 0 && c == '\'' {
+			if inSingle && i+1 < len(s) && s[i+1] == '\'' {
+				cur.WriteString("''")
+				i += 2
+				continue
+			}
+			inSingle = !inSingle
+		}
+		// Newline inside a statement becomes a space.
+		if c == '\n' {
+			if cur.Len() > 0 && !endsWithSpace(cur.String()) {
+				cur.WriteByte(' ')
+			}
+			i++
+			continue
+		}
+		// Top-level terminator.
+		if !inSingle && depth == 0 && c == ';' && cur.Len() > 0 {
+			cur.WriteByte(';')
+			flush()
+			i++
+			continue
+		}
+		cur.WriteByte(c)
+		i++
+	}
+	flush()
+	return out
+}
+
+func endsWithSpace(st string) bool {
+	return len(st) > 0 && st[len(st)-1] == ' '
+}
+
+func lineEndsStatement(s string) bool {
+	t := strings.TrimSpace(s)
+	return strings.HasSuffix(t, ";")
+}
+
+func splitLines(s string) []string {
+	var out []string
+	start := 0
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\n' {
+			out = append(out, s[start:i])
+			start = i + 1
 		}
 	}
-	if strings.TrimSpace(cur) != "" {
-		out = append(out, strings.TrimSpace(cur))
-	}
+	out = append(out, s[start:])
 	return out
 }
 

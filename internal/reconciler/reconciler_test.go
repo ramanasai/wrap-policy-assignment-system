@@ -231,6 +231,47 @@ func TestSweeper_RepairsDrift(t *testing.T) {
 	}
 }
 
+func TestSegmentChange_RebuildsMembershipAndReconciles(t *testing.T) {
+	h := newHarness(t)
+	ctx := context.Background()
+
+	// Two NY employees; the field_ops segment predicate is location = US-NY.
+	for i, loc := range []string{"US-NY", "US-CA"} {
+		id := fmt.Sprintf("emp_seg%d", i)
+		if err := h.store.AddEmployee(ctx, id, "co_test", "2024-01-19"); err != nil {
+			t.Fatalf("AddEmployee: %v", err)
+		}
+		if _, err := h.store.AddFact(ctx, id, "location", loc, "2024-01-19", "hr_edit"); err != nil {
+			t.Fatalf("AddFact: %v", err)
+		}
+	}
+	if err := h.store.CreateSegment(ctx, "field_ops", "co_test", "Field Ops",
+		[]byte(`{"op":"and","clauses":[{"attr":"location","op":"eq","value":"US-NY"}]}`)); err != nil {
+		t.Fatalf("CreateSegment: %v", err)
+	}
+
+	// Initial rebuild via the reconciler path (as a segment_changed event).
+	if err := h.rec.ReconcileSegmentChange(ctx, "field_ops", nil); err != nil {
+		t.Fatalf("ReconcileSegmentChange: %v", err)
+	}
+	members, err := h.store.Q.GetSegmentMembers(ctx, "field_ops")
+	if err != nil || len(members) != 1 || members[0] != "emp_seg0" {
+		t.Fatalf("members = %v (err=%v), want [emp_seg0]", members, err)
+	}
+
+	// Relocate emp_seg0 OUT of NY → membership change propagates.
+	if _, err := h.store.AddFact(ctx, "emp_seg0", "location", "US-CA", today(), "hr_edit"); err != nil {
+		t.Fatalf("relocate: %v", err)
+	}
+	if err := h.rec.ReconcileSegmentChange(ctx, "field_ops", nil); err != nil {
+		t.Fatalf("ReconcileSegmentChange(2): %v", err)
+	}
+	members, _ = h.store.Q.GetSegmentMembers(ctx, "field_ops")
+	if len(members) != 0 {
+		t.Fatalf("members after relocation = %v, want empty", members)
+	}
+}
+
 func TestScheduler_EmitsForFutureDatedTransitions(t *testing.T) {
 	h := newHarness(t)
 	ctx := context.Background()
