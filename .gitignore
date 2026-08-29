@@ -26,3 +26,9 @@ postgres-data/
 # Python (used only for local validation tooling)
 .venv/
 __pycache__/
+
+# stray build artifacts
+server
+seed
+demo
+worker
