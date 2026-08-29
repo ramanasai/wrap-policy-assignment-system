@@ -1,6 +1,9 @@
 # Warp — Policy Assignment System
 
-A take-home system design for the problem described in `DECISIONS.md`: a single, generic
+> 📬 **For graders:** start at [`SUBMISSION.md`](./SUBMISSION.md) — how to run,
+> criteria mapping, and the demo.
+>
+> A take-home system design for the problem described in `DECISIONS.md`: a single, generic
 substrate that decides **which policies apply to which employees on any given date** — for
 time off, pay schedules, app access, compliance trainings, benefits, managers, and more.
 
