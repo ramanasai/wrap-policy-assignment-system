@@ -55,7 +55,7 @@ decision-trace demo as the single highest-signal artifact.
       - `POST /employees/preview` (hypothetical hire → readiness checklist)
 - [x] Outbox writer in the same tx as fact changes (EmitEvent with idempotency keys)
 - [x] Live-DB API integration tests (readiness, diff, explain honesty, preview, validation)
-- [ ] `docker-compose.yml` (Postgres + app)
+- [x] `docker-compose.yml` (Postgres + API + worker + seed + demo profiles)
 
 ## Phase 4 — Reconciliation + scheduler (internal/)
 

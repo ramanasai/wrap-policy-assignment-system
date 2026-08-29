@@ -4,6 +4,39 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/); entries are grouped by session/date,
 newest first.
 
+## [Unreleased] — 2026-08-28 (Session 10)
+
+### Added
+- **One-command deployment**: `Dockerfile` (multi-stage, four static
+  binaries), `docker-compose.yml` (postgres + API :8080 + reconciler worker
+  + one-shot seed with `service_completed_successfully` gating + `run`
+  profile demo), `.dockerignore`. `make demo` already demonstrated locally;
+  README quickstart now offers both docker and local-Postgres paths.
+  Honest note: image build could NOT be verified on this machine — Docker
+  Hub is unreachable here (persistent EOF/TLS failures, same as earlier
+  sessions); compose YAML validated with `docker compose config` and every
+  binary verified via local build + live runs instead.
+- **`cmd/server`** — the chi API binary with graceful shutdown and
+  `ReadHeaderTimeout`; verified live: healthz/readyz, create-employee with
+  readiness, and explain returning a STORED trace over HTTP.
+
+### Fixed
+- **Additive dedup bug (live sweep catch)** — two additive rules mapping to
+  the SAME policy (tenure-based AND segment-based security training) made
+  the resolver emit duplicate policy rows; the reconciler then failed on
+  `assignment_pkey` during materialization (sweep aborted at the first hit).
+  Additive semantics are a SET of policies: `resolve.go` now dedupes by
+  (policy, policy version) in the additive branch while the trace still
+  covers every matching rule. Regression test added.
+
+### Validated (live)
+- Post-fix sweep converged cleanly: 9,023 traces, 6,651 assignments, 0
+  sweep failures, segments rebuilt (field_ops 320 / engineering_leads 30).
+- HTTP explain with a stored trace (facts_snapshot + policy_snapshot,
+  immutable) returned the audit answer end-to-end.
+- 8/8 packages green (incl. new additive regression); gofmt/vet/markdown
+  clean.
+
 ## [Unreleased] — 2026-08-28 (Session 9)
 
 ### Added

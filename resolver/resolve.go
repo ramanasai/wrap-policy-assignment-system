@@ -92,7 +92,15 @@ func Resolve(in Input) (Result, error) {
 
 	case in.Category.ResolutionStrategy == StrategyAdditive:
 		res.Outcome = OutcomeAssigned
+		seen := map[string]bool{}
 		for _, rr := range ranked {
+			key := rr.Rule.PolicyID + "/" + rr.Rule.PolicyVersionID
+			if seen[key] {
+				continue // additive = a SET of policies: several rules may
+				// map to the same policy (e.g. tenure-based AND segment-based
+				// security training) — materialized once (trace covers both).
+			}
+			seen[key] = true
 			res.Assignments = append(res.Assignments, toAssignment(rr.Rule))
 		}
 

@@ -324,6 +324,52 @@ func TestResolve_AdditiveStacksEverything(t *testing.T) {
 	}
 }
 
+func TestResolve_AdditiveDedupesSamePolicy(t *testing.T) {
+	// Two additive rules pointing at the SAME policy (tenure-based AND
+	// segment-based security training): the policy is materialized once;
+	// the trace still covers both rules. Regression: this previously
+	// produced duplicate policy rows that exploded the projection PK.
+	tenure := rule("r_sec_tenure", "compliance_training", fixedTime(0),
+		mustPred(`{"op":"and","clauses":[{"attr":"tenure_days","op":"gte","value":365}]}`))
+	segment := rule("r_sec_segment", "compliance_training", fixedTime(1*time.Hour),
+		mustPred(`{"op":"and","clauses":[{"attr":"segments","op":"contains","value":"field_ops"}]}`))
+	// Both map to the same policy AND policy version (as in production, where
+	// version ids come from the DB row, not the rule id).
+	tenure.PolicyID = "pol_train_security"
+	segment.PolicyID = "pol_train_security"
+	tenure.PolicyVersionID = "pol_train_security:v1"
+	segment.PolicyVersionID = "pol_train_security:v1"
+
+	res, err := Resolve(Input{
+		Category: manyCategory("compliance_training"),
+		Date:     "2026-03-03",
+		Facts: Facts{EmployeeID: "e", Attributes: map[string]any{
+			"tenure_days": 500,
+			"segments":    []any{"field_ops"},
+		}},
+		Rules: []RuleVersion{tenure, segment},
+	})
+	if err != nil {
+		t.Fatalf("Resolve() = %v", err)
+	}
+	if len(res.Assignments) != 1 {
+		t.Fatalf("additive dedup: got %d assignments, want 1: %+v", len(res.Assignments), res.Assignments)
+	}
+	if res.Assignments[0].PolicyID != "pol_train_security" {
+		t.Fatalf("assignment = %+v", res.Assignments[0])
+	}
+	// Both rules evaluated (trace completeness preserved).
+	matched := 0
+	for _, e := range res.Trace.Evaluated {
+		if e.Matched {
+			matched++
+		}
+	}
+	if matched != 2 {
+		t.Fatalf("trace matched %d rules, want 2 (both evaluated)", matched)
+	}
+}
+
 func TestResolve_RulesFromOtherCategoriesAreIgnored(t *testing.T) {
 	other := rule("r_other", "app_access", fixedTime(0), predCA)
 	mine := rule("r_mine", catVacation, fixedTime(0), predCA)

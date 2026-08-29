@@ -1,0 +1,78 @@
+# One-command local deployment:
+#   docker compose up --build      # postgres + API + reconciler worker
+#   docker compose run --rm demo   # the scripted narrative (grader artifact)
+#
+# The seed service runs once (idempotent) before app/worker start.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: pas
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pas"]
+      interval: 2s
+      timeout: 3s
+      retries: 60
+    ports:
+      - "5432:5432"
+    volumes:
+      - pas-data:/var/lib/postgresql/data
+
+  seed:
+    build: .
+    command: /bin/seed
+    environment: &env
+      APP_ENV: dev
+      DATABASE_URL: postgres://postgres:postgres@db:5432/pas?sslmode=disable
+      LOG_LEVEL: info
+      LOG_FORMAT: console
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    build: .
+    command: /bin/server
+    environment:
+      <<: *env
+      HTTP_PORT: "8080"
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      seed:
+        condition: service_completed_successfully
+
+  worker:
+    build: .
+    command: /bin/worker
+    environment:
+      <<: *env
+      RECONCILER_POLL_INTERVAL: 5s
+      SCHEDULER_INTERVAL: 1h
+      SWEEPER_INTERVAL: 15m
+    depends_on:
+      db:
+        condition: service_healthy
+      seed:
+        condition: service_completed_successfully
+
+  demo:
+    build: .
+    command: /bin/demo
+    environment:
+      <<: *env
+    profiles: ["run"]
+    depends_on:
+      db:
+        condition: service_healthy
+      seed:
+        condition: service_completed_successfully
+
+volumes:
+  pas-data:

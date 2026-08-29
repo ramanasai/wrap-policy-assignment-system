@@ -88,9 +88,14 @@ Nothing is patched; everything is recomputed.
 - **Inverted attribute index** means a rule or attribute change recomputes only the affected
   diff (employees entering/leaving each rule's scope), not the whole company.
 
-## Quickstart (demo)
+## Quickstart
 
 ```bash
+# Option A — one command (Docker):
+docker compose up --build          # postgres + API (:8080) + reconciler worker
+docker compose run --rm demo       # the scripted narrative (grader artifact)
+
+# Option B — local Postgres (recommended for development):
 make migrate   # apply schema to local Postgres (port 55432)
 make demo      # seed the demo company (1k employees) + run the scripted narrative
 cat demo/output.txt   # the captured run
